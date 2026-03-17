@@ -18,7 +18,7 @@ See: .planning/PROJECT.md (updated 17 mars 2026)
 
 | Phase | Name | Status | Plans |
 |---|---|---|---|
-| 01 | Foundation | ⏳ Not started | — |
+| 01 | Foundation | ✅ Complete | 01-01, 01-02 |
 | 02 | Projects | ⏳ Not started | — |
 | 03 | Visits | ⏳ Not started | — |
 | 04 | Decisions & Actions | ⏳ Not started | — |

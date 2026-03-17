@@ -33,7 +33,7 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
-        name="projects"
+        name="projects/index"
         options={{
           title: 'Chantiers',
           headerTitle: 'Mes Chantiers',
@@ -43,7 +43,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="actions"
+        name="actions/index"
         options={{
           title: 'Actions',
           headerTitle: 'Actions',

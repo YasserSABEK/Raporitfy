@@ -87,31 +87,16 @@ export const useAuth = create<AuthState>((set, get) => ({
         return { error: 'Erreur lors de la création du compte' };
       }
 
-      // 2. Create organization for the user
-      const { data: org, error: orgError } = await supabase
-        .from('organizations')
-        .insert({ name: `${fullName}'s Organization` })
-        .select()
-        .single();
+      // 2. Create org + profile atomically via SECURITY DEFINER function
+      const { error: signupError } = await supabase.rpc('handle_signup', {
+        user_id: data.user.id,
+        user_email: email.trim().toLowerCase(),
+        full_name: fullName,
+        user_role: 'terrain',
+      });
 
-      if (orgError) {
-        console.error('Org creation error:', orgError);
-        return { error: 'Erreur lors de la création de l\'organisation' };
-      }
-
-      // 3. Create profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: data.user.id,
-          organization_id: org.id,
-          full_name: fullName,
-          role: 'terrain',
-          email: email.trim().toLowerCase(),
-        });
-
-      if (profileError) {
-        console.error('Profile creation error:', profileError);
+      if (signupError) {
+        console.error('Signup RPC error:', signupError);
         return { error: 'Erreur lors de la création du profil' };
       }
 
