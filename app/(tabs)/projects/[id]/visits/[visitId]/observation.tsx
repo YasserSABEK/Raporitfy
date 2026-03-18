@@ -53,6 +53,7 @@ export default function ObservationScreen() {
   const [classification, setClassification] = useState('constat');
   const [photos, setPhotos] = useState<string[]>([]);
   const [existingPhotoPaths, setExistingPhotoPaths] = useState<string[]>([]);
+  const [existingPhotoUrls, setExistingPhotoUrls] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
   const [formLoaded, setFormLoaded] = useState(!isEditMode);
@@ -87,7 +88,7 @@ export default function ObservationScreen() {
             // skip failed signed URLs
           }
         }
-        // Don't add to photos state — existing photos are separate
+        setExistingPhotoUrls(urls);
       };
       loadUrls();
     }
@@ -314,14 +315,24 @@ export default function ObservationScreen() {
         />
 
         {/* Existing photos (edit mode) */}
-        {isEditMode && existingPhotoPaths.length > 0 && (
+        {isEditMode && existingPhotoUrls.length > 0 && (
+          <>
+            <Text style={styles.label}>PHOTOS EXISTANTES ({existingPhotoUrls.length})</Text>
+            <View style={styles.photoGrid}>
+              {existingPhotoUrls.map((uri, i) => (
+                <View key={`existing-${i}`} style={styles.photoWrapper}>
+                  <Image source={{ uri }} style={styles.photoThumb} />
+                </View>
+              ))}
+            </View>
+          </>
+        )}
+        {isEditMode && existingPhotoPaths.length > 0 && existingPhotoUrls.length === 0 && (
           <>
             <Text style={styles.label}>PHOTOS EXISTANTES ({existingPhotoPaths.length})</Text>
             <View style={styles.existingPhotosRow}>
-              <Ionicons name="images-outline" size={16} color={colors.textMuted} />
-              <Text style={styles.existingPhotosText}>
-                {existingPhotoPaths.length} photo{existingPhotoPaths.length > 1 ? 's' : ''} déjà attachée{existingPhotoPaths.length > 1 ? 's' : ''}
-              </Text>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={styles.existingPhotosText}>Chargement des photos...</Text>
             </View>
           </>
         )}

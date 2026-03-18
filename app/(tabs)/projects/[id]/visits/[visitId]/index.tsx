@@ -36,32 +36,32 @@ const STATUS_LABELS: Record<string, string> = {
   diffuse: 'Diffusé',
 };
 
+// Self-contained thumbnail component — each one loads its own signed URL
+function ObsThumb({ path }: { path: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getSignedUrl(path)
+      .then(signedUrl => { if (!cancelled) setUrl(signedUrl); })
+      .catch(err => console.warn('Thumb URL error:', err));
+    return () => { cancelled = true; };
+  }, [path]);
+
+  if (!url) return null;
+  return <Image source={{ uri: url }} style={thumbStyles.img} />;
+}
+
+const thumbStyles = StyleSheet.create({
+  img: { width: 60, height: 60, borderRadius: borderRadius.md },
+});
+
 export default function VisitDetailScreen() {
   const { id: projectId, visitId } = useLocalSearchParams<{ id: string; visitId: string }>();
   const { data: visit, isLoading: loadingVisit, error: errorVisit } = useVisit(visitId!);
   const { data: observations, isLoading: loadingObs, refetch, isRefetching } = useObservations(visitId!);
   const deleteMutation = useDeleteVisit();
   const deleteObsMutation = useDeleteObservation();
-  const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
-
-  // Load signed URLs for observation thumbnails
-  useEffect(() => {
-    if (!observations) return;
-    const loadUrls = async () => {
-      const urls: Record<string, string> = {};
-      for (const obs of observations) {
-        if (obs.first_photo_path && !photoUrls[obs.id]) {
-          try {
-            urls[obs.id] = await getSignedUrl(obs.first_photo_path);
-          } catch { /* skip */ }
-        }
-      }
-      if (Object.keys(urls).length > 0) {
-        setPhotoUrls(prev => ({ ...prev, ...urls }));
-      }
-    };
-    loadUrls();
-  }, [observations]);
 
   const handleRefresh = useCallback(() => { refetch(); }, [refetch]);
 
@@ -154,7 +154,6 @@ export default function VisitDetailScreen() {
 
   const renderObservationCard = ({ item }: { item: any }) => {
     const severityColor = SEVERITY_COLORS[item.severity] || colors.textMuted;
-    const thumbUrl = photoUrls[item.id];
     return (
       <TouchableOpacity
         style={[styles.obsCard, { borderLeftColor: severityColor, borderLeftWidth: 4 }]}
@@ -191,8 +190,8 @@ export default function VisitDetailScreen() {
               </View>
             )}
           </View>
-          {thumbUrl && (
-            <Image source={{ uri: thumbUrl }} style={styles.obsThumb} />
+          {item.first_photo_path && (
+            <ObsThumb path={item.first_photo_path} />
           )}
         </View>
       </TouchableOpacity>
