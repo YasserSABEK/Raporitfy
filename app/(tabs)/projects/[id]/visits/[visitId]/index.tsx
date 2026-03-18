@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,10 +8,12 @@ import {
   FlatList,
   RefreshControl,
   Alert,
+  Image,
 } from 'react-native';
 import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useVisit, useObservations, useDeleteVisit } from '@/lib/hooks/useVisits';
+import { useVisit, useObservations, useDeleteVisit, useDeleteObservation } from '@/lib/hooks/useVisits';
+import { getSignedUrl } from '@/lib/services/visits';
 import { colors, spacing, typography, borderRadius } from '@/lib/theme';
 import { formatDate } from '@/lib/utils/date';
 
@@ -39,6 +41,27 @@ export default function VisitDetailScreen() {
   const { data: visit, isLoading: loadingVisit, error: errorVisit } = useVisit(visitId!);
   const { data: observations, isLoading: loadingObs, refetch, isRefetching } = useObservations(visitId!);
   const deleteMutation = useDeleteVisit();
+  const deleteObsMutation = useDeleteObservation();
+  const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
+
+  // Load signed URLs for observation thumbnails
+  useEffect(() => {
+    if (!observations) return;
+    const loadUrls = async () => {
+      const urls: Record<string, string> = {};
+      for (const obs of observations) {
+        if (obs.first_photo_path && !photoUrls[obs.id]) {
+          try {
+            urls[obs.id] = await getSignedUrl(obs.first_photo_path);
+          } catch { /* skip */ }
+        }
+      }
+      if (Object.keys(urls).length > 0) {
+        setPhotoUrls(prev => ({ ...prev, ...urls }));
+      }
+    };
+    loadUrls();
+  }, [observations]);
 
   const handleRefresh = useCallback(() => { refetch(); }, [refetch]);
 
@@ -60,6 +83,45 @@ export default function VisitDetailScreen() {
             }
           },
         },
+      ]
+    );
+  };
+
+  const handleObservationLongPress = (obsId: string) => {
+    Alert.alert(
+      'Action',
+      'Que souhaitez-vous faire ?',
+      [
+        {
+          text: 'Modifier',
+          onPress: () => router.push(`/(tabs)/projects/${projectId}/visits/${visitId}/observation?observationId=${obsId}` as any),
+        },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Confirmer la suppression',
+              'Cette observation et ses photos seront supprimées.',
+              [
+                { text: 'Annuler', style: 'cancel' },
+                {
+                  text: 'Supprimer',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      await deleteObsMutation.mutateAsync(obsId);
+                      refetch();
+                    } catch (e: any) {
+                      Alert.alert('Erreur', e.message);
+                    }
+                  },
+                },
+              ]
+            );
+          },
+        },
+        { text: 'Annuler', style: 'cancel' },
       ]
     );
   };
@@ -92,38 +154,47 @@ export default function VisitDetailScreen() {
 
   const renderObservationCard = ({ item }: { item: any }) => {
     const severityColor = SEVERITY_COLORS[item.severity] || colors.textMuted;
+    const thumbUrl = photoUrls[item.id];
     return (
       <TouchableOpacity
         style={[styles.obsCard, { borderLeftColor: severityColor, borderLeftWidth: 4 }]}
         onPress={() => router.push(`/(tabs)/projects/${projectId}/visits/${visitId}/observation?observationId=${item.id}` as any)}
+        onLongPress={() => handleObservationLongPress(item.id)}
         activeOpacity={0.7}
       >
-        <View style={styles.obsHeader}>
-          <View style={styles.obsTags}>
-            {item.lot ? (
-              <View style={styles.obsTag}>
-                <Text style={styles.obsTagText}>{item.lot}</Text>
+        <View style={styles.obsCardRow}>
+          <View style={styles.obsCardContent}>
+            <View style={styles.obsHeader}>
+              <View style={styles.obsTags}>
+                {item.lot ? (
+                  <View style={styles.obsTag}>
+                    <Text style={styles.obsTagText}>{item.lot}</Text>
+                  </View>
+                ) : null}
+                {item.zone ? (
+                  <View style={styles.obsTag}>
+                    <Text style={styles.obsTagText}>{item.zone}</Text>
+                  </View>
+                ) : null}
               </View>
-            ) : null}
-            {item.zone ? (
-              <View style={styles.obsTag}>
-                <Text style={styles.obsTagText}>{item.zone}</Text>
+              <View style={[styles.severityBadge, { backgroundColor: severityColor + '20' }]}>
+                <Text style={[styles.severityText, { color: severityColor }]}>
+                  {SEVERITY_LABELS[item.severity] || item.severity}
+                </Text>
               </View>
-            ) : null}
+            </View>
+            <Text style={styles.obsDescription} numberOfLines={2}>{item.description}</Text>
+            {item.evidence_count > 0 && (
+              <View style={styles.obsFooter}>
+                <Ionicons name="camera-outline" size={14} color={colors.textMuted} />
+                <Text style={styles.obsFooterText}>{item.evidence_count} photo{item.evidence_count > 1 ? 's' : ''}</Text>
+              </View>
+            )}
           </View>
-          <View style={[styles.severityBadge, { backgroundColor: severityColor + '20' }]}>
-            <Text style={[styles.severityText, { color: severityColor }]}>
-              {SEVERITY_LABELS[item.severity] || item.severity}
-            </Text>
-          </View>
+          {thumbUrl && (
+            <Image source={{ uri: thumbUrl }} style={styles.obsThumb} />
+          )}
         </View>
-        <Text style={styles.obsDescription} numberOfLines={2}>{item.description}</Text>
-        {item.evidence_count > 0 && (
-          <View style={styles.obsFooter}>
-            <Ionicons name="camera-outline" size={14} color={colors.textMuted} />
-            <Text style={styles.obsFooterText}>{item.evidence_count} photo{item.evidence_count > 1 ? 's' : ''}</Text>
-          </View>
-        )}
       </TouchableOpacity>
     );
   };
@@ -306,6 +377,19 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  obsCardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  obsCardContent: {
+    flex: 1,
+  },
+  obsThumb: {
+    width: 60,
+    height: 60,
+    borderRadius: borderRadius.md,
   },
   obsHeader: {
     flexDirection: 'row',

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,9 +13,10 @@ import {
 import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { useCreateObservation, useAddEvidence } from '@/lib/hooks/useVisits';
-import { uploadPhoto } from '@/lib/services/visits';
+import { useCreateObservation, useUpdateObservation, useAddEvidence, useObservation, useEvidence } from '@/lib/hooks/useVisits';
+import { uploadPhoto, getSignedUrl } from '@/lib/services/visits';
 import { colors, spacing, typography, borderRadius } from '@/lib/theme';
+import { Severity } from '@/lib/types/domain';
 
 const SEVERITY_OPTIONS = [
   { value: 'mineur', label: 'Mineur', color: '#3B82F6' },
@@ -31,18 +32,66 @@ const LOT_SUGGESTIONS = [
 const MAX_PHOTOS = 15;
 
 export default function ObservationScreen() {
-  const { id: projectId, visitId } = useLocalSearchParams<{ id: string; visitId: string }>();
+  const { id: projectId, visitId, observationId } = useLocalSearchParams<{
+    id: string;
+    visitId: string;
+    observationId?: string;
+  }>();
+
+  const isEditMode = !!observationId;
+  const { data: existingObs } = useObservation(observationId || '');
+  const { data: existingEvidence } = useEvidence(observationId || '');
+
   const createMutation = useCreateObservation();
+  const updateMutation = useUpdateObservation();
   const addEvidenceMutation = useAddEvidence();
 
   const [lot, setLot] = useState('');
   const [zone, setZone] = useState('');
-  const [severity, setSeverity] = useState<string>('mineur');
+  const [severity, setSeverity] = useState<Severity>('mineur');
   const [description, setDescription] = useState('');
-  const [classification, setClassification] = useState<string>('constat');
+  const [classification, setClassification] = useState('constat');
   const [photos, setPhotos] = useState<string[]>([]);
+  const [existingPhotoPaths, setExistingPhotoPaths] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState('');
+  const [formLoaded, setFormLoaded] = useState(!isEditMode);
+
+  // Pre-fill form in edit mode
+  useEffect(() => {
+    if (isEditMode && existingObs && !formLoaded) {
+      setLot(existingObs.lot || '');
+      setZone(existingObs.zone || '');
+      setSeverity(existingObs.severity || 'mineur');
+      setDescription(existingObs.description || '');
+      setClassification(existingObs.classification || 'constat');
+      setFormLoaded(true);
+    }
+  }, [isEditMode, existingObs, formLoaded]);
+
+  // Load existing photo signed URLs
+  useEffect(() => {
+    if (isEditMode && existingEvidence && existingEvidence.length > 0) {
+      const loadUrls = async () => {
+        const paths = existingEvidence
+          .filter(e => e.type === 'photo' && e.file_url)
+          .map(e => e.file_url!);
+        setExistingPhotoPaths(paths);
+
+        const urls: string[] = [];
+        for (const path of paths) {
+          try {
+            const url = await getSignedUrl(path);
+            urls.push(url);
+          } catch {
+            // skip failed signed URLs
+          }
+        }
+        // Don't add to photos state — existing photos are separate
+      };
+      loadUrls();
+    }
+  }, [isEditMode, existingEvidence]);
 
   const requestPermission = async (type: 'camera' | 'library') => {
     if (type === 'camera') {
@@ -62,25 +111,33 @@ export default function ObservationScreen() {
   };
 
   const takePhoto = async () => {
-    if (photos.length >= MAX_PHOTOS) {
+    if (photos.length + existingPhotoPaths.length >= MAX_PHOTOS) {
       Alert.alert('Limite atteinte', `Maximum ${MAX_PHOTOS} photos par observation.`);
       return;
     }
     if (!(await requestPermission('camera'))) return;
 
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
-      quality: 0.8,
-      allowsEditing: false,
-    });
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+        allowsEditing: false,
+      });
 
-    if (!result.canceled && result.assets[0]) {
-      setPhotos(prev => [...prev, result.assets[0].uri]);
+      if (!result.canceled && result.assets[0]) {
+        setPhotos(prev => [...prev, result.assets[0].uri]);
+      }
+    } catch (e: any) {
+      Alert.alert(
+        'Caméra indisponible',
+        'La caméra n\'est pas disponible sur le simulateur. Utilisez la galerie ou testez sur un appareil réel.'
+      );
     }
   };
 
   const pickFromGallery = async () => {
-    if (photos.length >= MAX_PHOTOS) {
+    const remaining = MAX_PHOTOS - photos.length - existingPhotoPaths.length;
+    if (remaining <= 0) {
       Alert.alert('Limite atteinte', `Maximum ${MAX_PHOTOS} photos par observation.`);
       return;
     }
@@ -90,7 +147,7 @@ export default function ObservationScreen() {
       mediaTypes: ['images'],
       quality: 0.8,
       allowsMultipleSelection: true,
-      selectionLimit: MAX_PHOTOS - photos.length,
+      selectionLimit: remaining,
     });
 
     if (!result.canceled) {
@@ -114,17 +171,30 @@ export default function ObservationScreen() {
 
     setIsSubmitting(true);
     try {
-      // 1. Create observation
-      const obs = await createMutation.mutateAsync({
-        visit_id: visitId,
+      const obsData = {
         lot: lot.trim(),
         zone: zone.trim(),
         description: description.trim(),
         severity,
         classification,
-      });
+      };
 
-      // 2. Upload photos in parallel (max 3 concurrent)
+      let obsId: string;
+
+      if (isEditMode && observationId) {
+        // Update existing
+        await updateMutation.mutateAsync({ id: observationId, ...obsData });
+        obsId = observationId;
+      } else {
+        // Create new
+        const obs = await createMutation.mutateAsync({
+          visit_id: visitId,
+          ...obsData,
+        });
+        obsId = obs.id;
+      }
+
+      // Upload NEW photos in parallel (max 3 concurrent)
       if (photos.length > 0) {
         const MAX_CONCURRENT = 3;
         let completed = 0;
@@ -140,7 +210,7 @@ export default function ObservationScreen() {
             setUploadProgress(`Envoi ${completed}/${photos.length}...`);
             if (result.status === 'fulfilled') {
               await addEvidenceMutation.mutateAsync({
-                observation_id: obs.id,
+                observation_id: obsId,
                 type: 'photo',
                 file_url: result.value,
               });
@@ -158,12 +228,21 @@ export default function ObservationScreen() {
     }
   };
 
+  // Show loading state while fetching existing observation
+  if (isEditMode && !formLoaded) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <>
       <Stack.Screen
         options={{
           headerShown: true,
-          title: 'Nouvelle Observation',
+          title: isEditMode ? 'Modifier l\'Observation' : 'Nouvelle Observation',
           headerStyle: { backgroundColor: colors.background },
           headerTintColor: colors.text,
           headerTitleStyle: { fontWeight: typography.weights.semibold },
@@ -234,8 +313,23 @@ export default function ObservationScreen() {
           textAlignVertical="top"
         />
 
-        {/* Photos */}
-        <Text style={styles.label}>PHOTOS ({photos.length}/{MAX_PHOTOS})</Text>
+        {/* Existing photos (edit mode) */}
+        {isEditMode && existingPhotoPaths.length > 0 && (
+          <>
+            <Text style={styles.label}>PHOTOS EXISTANTES ({existingPhotoPaths.length})</Text>
+            <View style={styles.existingPhotosRow}>
+              <Ionicons name="images-outline" size={16} color={colors.textMuted} />
+              <Text style={styles.existingPhotosText}>
+                {existingPhotoPaths.length} photo{existingPhotoPaths.length > 1 ? 's' : ''} déjà attachée{existingPhotoPaths.length > 1 ? 's' : ''}
+              </Text>
+            </View>
+          </>
+        )}
+
+        {/* New photos */}
+        <Text style={styles.label}>
+          {isEditMode ? 'AJOUTER DES PHOTOS' : 'PHOTOS'} ({photos.length}/{MAX_PHOTOS - existingPhotoPaths.length})
+        </Text>
         <View style={styles.photoActions}>
           <TouchableOpacity style={styles.photoBtn} onPress={takePhoto}>
             <Ionicons name="camera" size={20} color={colors.primary} />
@@ -277,7 +371,9 @@ export default function ObservationScreen() {
           ) : (
             <>
               <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-              <Text style={styles.submitText}>Enregistrer l'observation</Text>
+              <Text style={styles.submitText}>
+                {isEditMode ? 'Modifier l\'observation' : 'Enregistrer l\'observation'}
+              </Text>
             </>
           )}
         </TouchableOpacity>
@@ -339,6 +435,18 @@ const styles = StyleSheet.create({
   },
   severityDot: { width: 10, height: 10, borderRadius: 5 },
   severityLabel: { fontSize: typography.sizes.sm, fontWeight: typography.weights.medium, color: colors.textSecondary },
+
+  existingPhotosRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    padding: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  existingPhotosText: { fontSize: typography.sizes.sm, color: colors.textSecondary },
 
   photoActions: { flexDirection: 'row', gap: spacing.sm },
   photoBtn: {

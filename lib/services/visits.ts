@@ -31,9 +31,13 @@ export async function createVisit(input: {
   summary?: string;
   participants?: string[];
 }): Promise<Visit> {
+  // Get current user for created_by (column has no DEFAULT)
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Non authentifié');
+
   const { data, error } = await supabase
     .from('visits')
-    .insert(input)
+    .insert({ ...input, created_by: user.id })
     .select()
     .single();
   if (error) throw new Error(error.message);
@@ -61,18 +65,23 @@ export async function deleteVisit(id: string): Promise<void> {
 
 // ============ OBSERVATIONS ============
 
-export async function getObservations(visitId: string): Promise<(Observation & { evidence_count: number })[]> {
+export async function getObservations(visitId: string): Promise<(Observation & { evidence_count: number; first_photo_path: string | null })[]> {
   const { data, error } = await supabase
     .from('observations')
-    .select('*, evidence(id)')
+    .select('*, evidence(id, type, file_url)')
     .eq('visit_id', visitId)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
-  return (data ?? []).map((o: any) => ({
-    ...o,
-    evidence_count: Array.isArray(o.evidence) ? o.evidence.length : 0,
-    evidence: undefined,
-  }));
+  return (data ?? []).map((o: any) => {
+    const evidenceList = Array.isArray(o.evidence) ? o.evidence : [];
+    const firstPhoto = evidenceList.find((e: any) => e.type === 'photo' && e.file_url);
+    return {
+      ...o,
+      evidence_count: evidenceList.length,
+      first_photo_path: firstPhoto?.file_url || null,
+      evidence: undefined,
+    };
+  });
 }
 
 export async function getObservation(id: string): Promise<Observation> {

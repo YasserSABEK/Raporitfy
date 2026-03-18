@@ -80,6 +80,7 @@ export interface Observation {
   source: string | null;
   confidence: number;
   created_at: string;
+  updated_at: string;
 }
 
 export interface Evidence {
@@ -89,6 +90,7 @@ export interface Evidence {
   file_url: string | null;
   content: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 export interface Decision {
