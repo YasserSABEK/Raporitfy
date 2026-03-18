@@ -34,7 +34,7 @@ function AuthGate() {
     if (!session && !inAuthGroup) {
       router.replace('/(auth)/login');
     } else if (session && inAuthGroup) {
-      router.replace('/(tabs)/projects');
+      router.replace('/(tabs)/projects/index' as any);
     }
   }, [session, loading, initialized, segments]);
 
