@@ -7,9 +7,9 @@ import {
   RefreshControl,
   ActivityIndicator,
   Alert,
+  FlatList,
 } from 'react-native';
 import { router } from 'expo-router';
-import { FlashList } from '@shopify/flash-list';
 import { Ionicons } from '@expo/vector-icons';
 import { useProjects, useArchiveProject } from '@/lib/hooks/useProjects';
 import { colors, spacing, typography, borderRadius } from '@/lib/theme';
@@ -159,10 +159,10 @@ export default function ProjectsScreen() {
           </Text>
         </View>
       ) : (
-        <FlashList
+        <FlatList
           data={filteredProjects}
           renderItem={renderProjectCard}
-          estimatedItemSize={140}
+          keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           refreshControl={
             <RefreshControl
