@@ -165,16 +165,27 @@ export async function removeEvidence(id: string): Promise<void> {
 // ============ PHOTO UPLOAD ============
 
 export async function uploadPhoto(uri: string): Promise<string> {
-  const response = await fetch(uri);
-  const blob = await response.blob();
+  // Read file as base64 using expo-file-system (fetch().blob() returns 0-byte on RN iOS)
+  const FileSystem = require('expo-file-system');
+  const base64 = await FileSystem.readAsStringAsync(uri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+
+  // Decode base64 to Uint8Array
+  const binaryString = atob(base64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
 
   const ext = uri.split('.').pop()?.split('?')[0] || 'jpg';
+  const mimeType = ext === 'heic' ? 'image/heic' : ext === 'webp' ? 'image/webp' : ext === 'png' ? 'image/png' : 'image/jpeg';
   const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
   const path = `observations/${filename}`;
 
   const { error } = await supabase.storage
     .from('evidence-photos')
-    .upload(path, blob, { contentType: `image/${ext}` });
+    .upload(path, bytes.buffer, { contentType: mimeType });
   if (error) throw new Error(error.message);
 
   return path;
