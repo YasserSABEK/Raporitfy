@@ -85,7 +85,8 @@ export function useUpdateObservation() {
     mutationFn: ({ id, ...updates }: { id: string } & Parameters<typeof visitService.updateObservation>[1]) =>
       visitService.updateObservation(id, updates),
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['observations'] });
+      queryClient.invalidateQueries({ queryKey: ['visits'] });
+      queryClient.invalidateQueries({ queryKey: ['observations', variables.id] });
     },
   });
 }
@@ -95,7 +96,7 @@ export function useDeleteObservation() {
   return useMutation({
     mutationFn: visitService.deleteObservation,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['observations'] });
+      queryClient.invalidateQueries({ queryKey: ['visits'] });
     },
   });
 }
@@ -116,7 +117,7 @@ export function useAddEvidence() {
     mutationFn: visitService.addEvidence,
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['observations', variables.observation_id, 'evidence'] });
-      queryClient.invalidateQueries({ queryKey: ['observations'] });
+      queryClient.invalidateQueries({ queryKey: ['visits'] });
     },
   });
 }
@@ -126,7 +127,7 @@ export function useRemoveEvidence() {
   return useMutation({
     mutationFn: visitService.removeEvidence,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['observations'] });
+      queryClient.invalidateQueries({ queryKey: ['visits'] });
     },
   });
 }

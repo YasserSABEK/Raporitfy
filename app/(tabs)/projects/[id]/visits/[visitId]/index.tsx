@@ -125,7 +125,7 @@ export default function VisitDetailScreen() {
       [
         {
           text: 'Modifier',
-          onPress: () => router.push(`/(tabs)/projects/${projectId}/visits/${visitId}/observation?observationId=${obsId}` as any),
+          onPress: () => router.push(`/(tabs)/projects/${projectId}/visits/${visitId}/observation?observationId=${obsId}&t=${Date.now()}` as any),
         },
         {
           text: 'Supprimer',
@@ -189,7 +189,7 @@ export default function VisitDetailScreen() {
     return (
       <TouchableOpacity
         style={[styles.obsCard, { borderLeftColor: severityColor, borderLeftWidth: 4 }]}
-        onPress={() => router.push(`/(tabs)/projects/${projectId}/visits/${visitId}/observation?observationId=${item.id}` as any)}
+        onPress={() => router.push(`/(tabs)/projects/${projectId}/visits/${visitId}/observation?observationId=${item.id}&t=${Date.now()}` as any)}
         onLongPress={() => handleObservationLongPress(item.id)}
         activeOpacity={0.7}
       >
@@ -316,7 +316,7 @@ export default function VisitDetailScreen() {
         {/* FAB — Add Observation */}
         <TouchableOpacity
           style={styles.fab}
-          onPress={() => router.push(`/(tabs)/projects/${projectId}/visits/${visitId}/observation` as any)}
+          onPress={() => router.push(`/(tabs)/projects/${projectId}/visits/${visitId}/observation?t=${Date.now()}` as any)}
           activeOpacity={0.8}
         >
           <Ionicons name="add" size={28} color="#FFFFFF" />
@@ -406,22 +406,12 @@ const styles = StyleSheet.create({
   obsCard: {
     backgroundColor: colors.surfaceElevated,
     borderRadius: borderRadius.md,
-    padding: spacing.md,
+    overflow: 'hidden',
     borderWidth: 1,
     borderColor: colors.border,
   },
-  obsCardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
   obsCardContent: {
-    flex: 1,
-  },
-  obsThumb: {
-    width: 60,
-    height: 60,
-    borderRadius: borderRadius.md,
+    padding: spacing.md,
   },
   obsHeader: {
     flexDirection: 'row',
