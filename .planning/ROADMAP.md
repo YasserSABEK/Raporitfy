@@ -30,18 +30,19 @@
 
 ---
 
-### Phase 03 — Visits
+### Phase 03 — Visits ✅
 **Goal:** Users can create visits, add participants, and capture structured observations with photos.
 **Requirements:** [VISIT-01, VISIT-02, VISIT-03, OBS-01, OBS-02, OBS-03, OBS-04]
-**Estimated Plans:** 3-4
+**Status:** Complete (18 mars 2026)
 
-- Create visit screen (date, type, weather, participants, agenda)
-- Visit detail screen with Observations / Décisions / Actions sections
-- Observation form: lot, zone, severity, description
-- Camera integration (expo-camera / expo-image-picker)
-- Photo compression + upload to Supabase Storage
-- Observations list with filtering by lot/zone
-- DB tables: visits, observations, evidence
+- ✅ Create visit screen (date, type, weather, participants, agenda)
+- ✅ Visit detail screen with Observations / Décisions / Actions sections
+- ✅ Observation form: lot, zone, severity, description
+- ✅ Camera integration (expo-image-picker)
+- ✅ Photo upload to Supabase Storage (base64-arraybuffer pattern)
+- ✅ Photo carousel thumbnails on observation cards
+- ✅ DB tables: visits, observations, evidence
+- ✅ CTO audit: cache invalidation, form state, card layout fixes
 
 ---
 
