@@ -1,12 +1,8 @@
 import { useEffect } from 'react';
 import { Redirect } from 'expo-router';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import * as SplashScreen from 'expo-splash-screen';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { colors } from '@/lib/theme';
-
-// Keep splash screen visible until auth state is determined
-SplashScreen.preventAutoHideAsync();
 
 export default function Index() {
   const { session, initialized, initialize } = useAuth();
@@ -17,13 +13,7 @@ export default function Index() {
     }
   }, [initialized]);
 
-  useEffect(() => {
-    if (initialized) {
-      SplashScreen.hideAsync();
-    }
-  }, [initialized]);
-
-  // Still loading — show spinner (splash screen hides behind it)
+  // Still loading auth state
   if (!initialized) {
     return (
       <View style={styles.loading}>
