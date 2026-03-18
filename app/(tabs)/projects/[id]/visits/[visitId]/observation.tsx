@@ -32,10 +32,11 @@ const LOT_SUGGESTIONS = [
 const MAX_PHOTOS = 15;
 
 export default function ObservationScreen() {
-  const { id: projectId, visitId, observationId } = useLocalSearchParams<{
+  const { id: projectId, visitId, observationId, t } = useLocalSearchParams<{
     id: string;
     visitId: string;
     observationId?: string;
+    t?: string;
   }>();
 
   const isEditMode = !!observationId;
@@ -58,7 +59,7 @@ export default function ObservationScreen() {
   const [uploadProgress, setUploadProgress] = useState('');
   const [formLoaded, setFormLoaded] = useState(!isEditMode);
 
-  // Reset form when switching to create mode (no observationId)
+  // Reset form on every fresh navigation (t changes each time)
   useEffect(() => {
     if (!isEditMode) {
       setLot('');
@@ -70,8 +71,11 @@ export default function ObservationScreen() {
       setExistingPhotoPaths([]);
       setExistingPhotoUrls([]);
       setFormLoaded(true);
+    } else {
+      // In edit mode, reset formLoaded to allow pre-fill
+      setFormLoaded(false);
     }
-  }, [isEditMode]);
+  }, [observationId, t]);
 
   // Pre-fill form in edit mode
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -21,13 +21,21 @@ const VISIT_TYPES = [
 ] as const;
 
 export default function NewVisitScreen() {
-  const { id: projectId } = useLocalSearchParams<{ id: string }>();
+  const { id: projectId, t } = useLocalSearchParams<{ id: string; t?: string }>();
   const createMutation = useCreateVisit();
 
   const [type, setType] = useState<string>('chantier');
   const [weather, setWeather] = useState('');
   const [summary, setSummary] = useState('');
   const [participants, setParticipants] = useState('');
+
+  // Reset form on every fresh navigation
+  useEffect(() => {
+    setType('chantier');
+    setWeather('');
+    setSummary('');
+    setParticipants('');
+  }, [t]);
 
   const today = new Date().toISOString().split('T')[0];
 

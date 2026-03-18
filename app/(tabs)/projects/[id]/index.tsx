@@ -203,7 +203,7 @@ export default function ProjectDetailScreen() {
         {/* FAB */}
         <TouchableOpacity
           style={styles.fab}
-          onPress={() => router.push(`/(tabs)/projects/${id}/visits/new` as any)}
+          onPress={() => router.push(`/(tabs)/projects/${id}/visits/new?t=${Date.now()}` as any)}
           activeOpacity={0.8}
         >
           <Ionicons name="add" size={28} color="#FFFFFF" />
