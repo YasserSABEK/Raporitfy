@@ -1,3 +1,4 @@
+import { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -5,18 +6,44 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  FlatList,
+  RefreshControl,
 } from 'react-native';
 import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useProject } from '@/lib/hooks/useProjects';
+import { useVisits } from '@/lib/hooks/useVisits';
 import { colors, spacing, typography, borderRadius } from '@/lib/theme';
-import { formatDate } from '@/lib/utils/date';
+import { formatDate, formatRelative } from '@/lib/utils/date';
+import { Visit } from '@/lib/types/domain';
+
+const VISIT_TYPE_LABELS: Record<string, string> = {
+  chantier: 'Visite de chantier',
+  reception: 'Réception',
+  levee_reserves: 'Levée de réserves',
+};
+
+const VISIT_TYPE_ICONS: Record<string, string> = {
+  chantier: 'construct-outline',
+  reception: 'checkmark-circle-outline',
+  levee_reserves: 'clipboard-outline',
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  brouillon: colors.textMuted,
+  en_revue: '#F59E0B',
+  valide: colors.success,
+  diffuse: colors.primary,
+};
 
 export default function ProjectDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { data: project, isLoading, error } = useProject(id!);
+  const { data: project, isLoading: loadingProject, error: errorProject } = useProject(id!);
+  const { data: visits, isLoading: loadingVisits, refetch, isRefetching } = useVisits(id!);
 
-  if (isLoading) {
+  const handleRefresh = useCallback(() => { refetch(); }, [refetch]);
+
+  if (loadingProject) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -24,7 +51,7 @@ export default function ProjectDetailScreen() {
     );
   }
 
-  if (error || !project) {
+  if (errorProject || !project) {
     return (
       <View style={styles.centered}>
         <Ionicons name="warning-outline" size={48} color={colors.error} />
@@ -35,6 +62,57 @@ export default function ProjectDetailScreen() {
       </View>
     );
   }
+
+  const renderVisitCard = ({ item }: { item: Visit }) => (
+    <TouchableOpacity
+      style={styles.visitCard}
+      onPress={() => router.push(`/(tabs)/projects/${id}/visits/${item.id}` as any)}
+      activeOpacity={0.7}
+    >
+      <View style={styles.visitCardHeader}>
+        <View style={styles.visitTypeRow}>
+          <Ionicons
+            name={(VISIT_TYPE_ICONS[item.type] || 'calendar-outline') as any}
+            size={18}
+            color={colors.primary}
+          />
+          <Text style={styles.visitTypeName}>
+            {VISIT_TYPE_LABELS[item.type] || item.type}
+          </Text>
+        </View>
+        <View style={[styles.visitStatusBadge, { backgroundColor: STATUS_COLORS[item.status] + '20' }]}>
+          <View style={[styles.visitStatusDot, { backgroundColor: STATUS_COLORS[item.status] }]} />
+          <Text style={[styles.visitStatusText, { color: STATUS_COLORS[item.status] }]}>
+            {item.status === 'brouillon' ? 'Brouillon' :
+             item.status === 'en_revue' ? 'En revue' :
+             item.status === 'valide' ? 'Validé' : 'Diffusé'}
+          </Text>
+        </View>
+      </View>
+
+      <Text style={styles.visitDate}>{formatDate(item.date)}</Text>
+
+      {item.weather && (
+        <View style={styles.visitInfoRow}>
+          <Ionicons name="partly-sunny-outline" size={14} color={colors.textMuted} />
+          <Text style={styles.visitInfoText}>{item.weather}</Text>
+        </View>
+      )}
+
+      {item.participants && item.participants.length > 0 && (
+        <View style={styles.visitInfoRow}>
+          <Ionicons name="people-outline" size={14} color={colors.textMuted} />
+          <Text style={styles.visitInfoText}>
+            {item.participants.length} participant{item.participants.length > 1 ? 's' : ''}
+          </Text>
+        </View>
+      )}
+
+      {item.summary && (
+        <Text style={styles.visitSummary} numberOfLines={2}>{item.summary}</Text>
+      )}
+    </TouchableOpacity>
+  );
 
   return (
     <>
@@ -55,67 +133,82 @@ export default function ProjectDetailScreen() {
           ),
         }}
       />
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+      <View style={styles.container}>
         {/* Project Header Card */}
-        <View style={styles.headerCard}>
-          <View style={styles.headerIcon}>
-            <Ionicons name="business" size={32} color={colors.primary} />
-          </View>
-          <Text style={styles.projectName}>{project.name}</Text>
-
-          {project.address && (
-            <View style={styles.infoRow}>
-              <Ionicons name="location-outline" size={16} color={colors.textMuted} />
-              <Text style={styles.infoText}>{project.address}</Text>
-            </View>
-          )}
-
-          <View style={styles.metaRow}>
-            {project.phase && (
-              <View style={styles.phaseBadge}>
-                <Text style={styles.phaseBadgeText}>{project.phase}</Text>
+        <FlatList
+          data={visits ?? []}
+          renderItem={renderVisitCard}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={handleRefresh}
+              tintColor={colors.primary}
+            />
+          }
+          ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
+          ListHeaderComponent={
+            <>
+              <View style={styles.headerCard}>
+                <View style={styles.headerIcon}>
+                  <Ionicons name="business" size={32} color={colors.primary} />
+                </View>
+                <Text style={styles.projectName}>{project.name}</Text>
+                {project.address && (
+                  <View style={styles.infoRow}>
+                    <Ionicons name="location-outline" size={16} color={colors.textMuted} />
+                    <Text style={styles.infoText}>{project.address}</Text>
+                  </View>
+                )}
+                <View style={styles.metaRow}>
+                  {project.phase && (
+                    <View style={styles.phaseBadge}>
+                      <Text style={styles.phaseBadgeText}>{project.phase}</Text>
+                    </View>
+                  )}
+                  <View style={[styles.statusBadge, project.status === 'active' ? styles.statusActive : styles.statusArchived]}>
+                    <View style={[styles.statusDot, { backgroundColor: project.status === 'active' ? colors.success : colors.textMuted }]} />
+                    <Text style={[styles.statusText, { color: project.status === 'active' ? colors.success : colors.textMuted }]}>
+                      {project.status === 'active' ? 'Actif' : 'Archivé'}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.dateText}>Créé le {formatDate(project.created_at)}</Text>
               </View>
-            )}
-            <View style={[styles.statusBadge, project.status === 'active' ? styles.statusActive : styles.statusArchived]}>
-              <View style={[styles.statusDot, { backgroundColor: project.status === 'active' ? colors.success : colors.textMuted }]} />
-              <Text style={[styles.statusText, { color: project.status === 'active' ? colors.success : colors.textMuted }]}>
-                {project.status === 'active' ? 'Actif' : 'Archivé'}
-              </Text>
-            </View>
-          </View>
 
-          {project.description && (
-            <Text style={styles.description}>{project.description}</Text>
-          )}
+              {/* Section Title */}
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>
+                  Visites {visits && visits.length > 0 ? `(${visits.length})` : ''}
+                </Text>
+              </View>
+            </>
+          }
+          ListEmptyComponent={
+            loadingVisits ? (
+              <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: spacing.lg }} />
+            ) : (
+              <View style={styles.placeholder}>
+                <Ionicons name="calendar-outline" size={40} color={colors.textMuted} />
+                <Text style={styles.placeholderTitle}>Aucune visite</Text>
+                <Text style={styles.placeholderSubtitle}>
+                  Planifiez votre première visite de chantier.
+                </Text>
+              </View>
+            )
+          }
+        />
 
-          <Text style={styles.dateText}>Créé le {formatDate(project.created_at)}</Text>
-        </View>
-
-        {/* Visits Section — Placeholder for Phase 03 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Visites</Text>
-          <View style={styles.placeholder}>
-            <Ionicons name="calendar-outline" size={40} color={colors.textMuted} />
-            <Text style={styles.placeholderTitle}>Aucune visite</Text>
-            <Text style={styles.placeholderSubtitle}>
-              Les visites de chantier seront disponibles dans la Phase 03.
-            </Text>
-          </View>
-        </View>
-
-        {/* Quick Actions */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Actions rapides</Text>
-          <TouchableOpacity
-            style={styles.actionRow}
-            onPress={() => router.push(`/(tabs)/projects/${id}/settings` as any)}
-          >
-            <Ionicons name="settings-outline" size={20} color={colors.textSecondary} />
-            <Text style={styles.actionText}>Réglages du projet</Text>
-            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+        {/* FAB */}
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => router.push(`/(tabs)/projects/${id}/visits/new` as any)}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="add" size={28} color="#FFFFFF" />
+        </TouchableOpacity>
+      </View>
     </>
   );
 }
@@ -127,7 +220,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.md,
-    paddingBottom: spacing.xxl,
+    paddingBottom: 100,
   },
   centered: {
     flex: 1,
@@ -205,39 +298,85 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.medium,
     color: colors.textSecondary,
   },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 3,
-    borderRadius: borderRadius.full,
-  },
+  statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: spacing.sm, paddingVertical: 3, borderRadius: borderRadius.full },
   statusActive: { backgroundColor: colors.successMuted },
   statusArchived: { backgroundColor: colors.surface },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   statusText: { fontSize: typography.sizes.xs, fontWeight: typography.weights.medium },
-  description: {
-    fontSize: typography.sizes.md,
-    color: colors.textSecondary,
-    lineHeight: 22,
-    marginBottom: spacing.sm,
-  },
-  dateText: {
-    fontSize: typography.sizes.xs,
-    color: colors.textMuted,
-  },
+  dateText: { fontSize: typography.sizes.xs, color: colors.textMuted },
 
-  // Sections
-  section: {
-    marginBottom: spacing.lg,
+  // Section
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
   },
   sectionTitle: {
     fontSize: typography.sizes.lg,
     fontWeight: typography.weights.semibold,
     color: colors.text,
-    marginBottom: spacing.sm,
   },
+
+  // Visit cards
+  visitCard: {
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  visitCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  visitTypeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+  },
+  visitTypeName: {
+    fontSize: typography.sizes.sm,
+    fontWeight: typography.weights.medium,
+    color: colors.primary,
+  },
+  visitStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: borderRadius.full,
+  },
+  visitStatusDot: { width: 6, height: 6, borderRadius: 3 },
+  visitStatusText: { fontSize: typography.sizes.xs, fontWeight: typography.weights.medium },
+  visitDate: {
+    fontSize: typography.sizes.lg,
+    fontWeight: typography.weights.bold,
+    color: colors.text,
+    marginBottom: spacing.xs,
+  },
+  visitInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 2,
+  },
+  visitInfoText: {
+    fontSize: typography.sizes.sm,
+    color: colors.textMuted,
+  },
+  visitSummary: {
+    fontSize: typography.sizes.sm,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+    lineHeight: 18,
+  },
+
+  // Placeholder
   placeholder: {
     backgroundColor: colors.surface,
     borderRadius: borderRadius.lg,
@@ -259,19 +398,22 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: spacing.xs,
   },
-  actionRow: {
-    flexDirection: 'row',
+
+  // FAB
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.surfaceElevated,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    gap: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  actionText: {
-    flex: 1,
-    fontSize: typography.sizes.md,
-    color: colors.text,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
   },
 });

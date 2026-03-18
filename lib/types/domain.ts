@@ -61,10 +61,12 @@ export interface Visit {
   type: VisitType;
   weather: string | null;
   summary: string | null;
+  participants: string[];
   status: VisitStatus;
   version: number;
   created_by: string;
   created_at: string;
+  updated_at: string;
 }
 
 export interface Observation {

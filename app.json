@@ -27,7 +27,14 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Raporitfy a besoin d'accéder à vos photos pour les ajouter aux observations.",
+          "cameraPermission": "Raporitfy a besoin de votre caméra pour photographier les observations de chantier."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": false
