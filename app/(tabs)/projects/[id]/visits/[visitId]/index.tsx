@@ -9,6 +9,8 @@ import {
   RefreshControl,
   Alert,
   Image,
+  ScrollView,
+  Dimensions,
 } from 'react-native';
 import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -36,14 +38,53 @@ const STATUS_LABELS: Record<string, string> = {
   diffuse: 'Diffusé',
 };
 
-// Simple synchronous thumbnail — public bucket, no async needed
-function ObsThumb({ path }: { path: string }) {
-  const url = getPhotoUrl(path);
-  return <Image source={{ uri: url }} style={thumbStyles.img} />;
+// Photo carousel for observation cards
+const CARD_WIDTH = Dimensions.get('window').width - spacing.lg * 2 - 2; // minus card padding + border
+
+function PhotoCarousel({ paths }: { paths: string[] }) {
+  if (paths.length === 0) return null;
+  if (paths.length === 1) {
+    return (
+      <Image
+        source={{ uri: getPhotoUrl(paths[0]) }}
+        style={thumbStyles.single}
+        resizeMode="cover"
+      />
+    );
+  }
+  return (
+    <ScrollView
+      horizontal
+      pagingEnabled
+      showsHorizontalScrollIndicator={false}
+      style={thumbStyles.carousel}
+    >
+      {paths.map((p, i) => (
+        <Image
+          key={i}
+          source={{ uri: getPhotoUrl(p) }}
+          style={thumbStyles.carouselItem}
+          resizeMode="cover"
+        />
+      ))}
+    </ScrollView>
+  );
 }
 
 const thumbStyles = StyleSheet.create({
-  img: { width: 80, height: 80, borderRadius: borderRadius.md },
+  single: {
+    width: '100%',
+    height: 180,
+    borderTopLeftRadius: borderRadius.md,
+    borderTopRightRadius: borderRadius.md,
+  },
+  carousel: { height: 180 },
+  carouselItem: {
+    width: CARD_WIDTH,
+    height: 180,
+    borderTopLeftRadius: borderRadius.md,
+    borderTopRightRadius: borderRadius.md,
+  },
 });
 
 export default function VisitDetailScreen() {
@@ -144,6 +185,7 @@ export default function VisitDetailScreen() {
 
   const renderObservationCard = ({ item }: { item: any }) => {
     const severityColor = SEVERITY_COLORS[item.severity] || colors.textMuted;
+    const hasPhotos = item.photo_paths && item.photo_paths.length > 0;
     return (
       <TouchableOpacity
         style={[styles.obsCard, { borderLeftColor: severityColor, borderLeftWidth: 4 }]}
@@ -151,37 +193,38 @@ export default function VisitDetailScreen() {
         onLongPress={() => handleObservationLongPress(item.id)}
         activeOpacity={0.7}
       >
-        <View style={styles.obsCardRow}>
-          <View style={styles.obsCardContent}>
-            <View style={styles.obsHeader}>
-              <View style={styles.obsTags}>
-                {item.lot ? (
-                  <View style={styles.obsTag}>
-                    <Text style={styles.obsTagText}>{item.lot}</Text>
-                  </View>
-                ) : null}
-                {item.zone ? (
-                  <View style={styles.obsTag}>
-                    <Text style={styles.obsTagText}>{item.zone}</Text>
-                  </View>
-                ) : null}
-              </View>
-              <View style={[styles.severityBadge, { backgroundColor: severityColor + '20' }]}>
-                <Text style={[styles.severityText, { color: severityColor }]}>
-                  {SEVERITY_LABELS[item.severity] || item.severity}
-                </Text>
-              </View>
+        {hasPhotos && (
+          <PhotoCarousel paths={item.photo_paths} />
+        )}
+        <View style={styles.obsCardContent}>
+          <View style={styles.obsHeader}>
+            <View style={styles.obsTags}>
+              {item.lot ? (
+                <View style={styles.obsTag}>
+                  <Text style={styles.obsTagText}>{item.lot}</Text>
+                </View>
+              ) : null}
+              {item.zone ? (
+                <View style={styles.obsTag}>
+                  <Text style={styles.obsTagText}>{item.zone}</Text>
+                </View>
+              ) : null}
             </View>
-            <Text style={styles.obsDescription} numberOfLines={2}>{item.description}</Text>
-            {item.evidence_count > 0 && (
-              <View style={styles.obsFooter}>
-                <Ionicons name="camera-outline" size={14} color={colors.textMuted} />
-                <Text style={styles.obsFooterText}>{item.evidence_count} photo{item.evidence_count > 1 ? 's' : ''}</Text>
-              </View>
-            )}
+            <View style={[styles.severityBadge, { backgroundColor: severityColor + '20' }]}>
+              <Text style={[styles.severityText, { color: severityColor }]}>
+                {SEVERITY_LABELS[item.severity] || item.severity}
+              </Text>
+            </View>
           </View>
-          {item.first_photo_path && (
-            <ObsThumb path={item.first_photo_path} />
+          <Text style={styles.obsDescription} numberOfLines={2}>{item.description}</Text>
+          {item.evidence_count > 0 && (
+            <View style={styles.obsFooter}>
+              <Ionicons name="camera-outline" size={14} color={colors.textMuted} />
+              <Text style={styles.obsFooterText}>
+                {item.evidence_count} photo{item.evidence_count > 1 ? 's' : ''}
+                {item.photo_paths?.length > 1 ? ` · Glissez →` : ''}
+              </Text>
+            </View>
           )}
         </View>
       </TouchableOpacity>

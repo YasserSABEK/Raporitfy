@@ -65,7 +65,7 @@ export async function deleteVisit(id: string): Promise<void> {
 
 // ============ OBSERVATIONS ============
 
-export async function getObservations(visitId: string): Promise<(Observation & { evidence_count: number; first_photo_path: string | null })[]> {
+export async function getObservations(visitId: string): Promise<(Observation & { evidence_count: number; first_photo_path: string | null; photo_paths: string[] })[]> {
   const { data, error } = await supabase
     .from('observations')
     .select('*, evidence(id, type, file_url)')
@@ -74,11 +74,14 @@ export async function getObservations(visitId: string): Promise<(Observation & {
   if (error) throw new Error(error.message);
   return (data ?? []).map((o: any) => {
     const evidenceList = Array.isArray(o.evidence) ? o.evidence : [];
-    const firstPhoto = evidenceList.find((e: any) => e.type === 'photo' && e.file_url);
+    const photoPaths = evidenceList
+      .filter((e: any) => e.type === 'photo' && e.file_url)
+      .map((e: any) => e.file_url as string);
     return {
       ...o,
       evidence_count: evidenceList.length,
-      first_photo_path: firstPhoto?.file_url || null,
+      first_photo_path: photoPaths[0] || null,
+      photo_paths: photoPaths,
       evidence: undefined,
     };
   });

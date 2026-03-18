@@ -58,6 +58,21 @@ export default function ObservationScreen() {
   const [uploadProgress, setUploadProgress] = useState('');
   const [formLoaded, setFormLoaded] = useState(!isEditMode);
 
+  // Reset form when switching to create mode (no observationId)
+  useEffect(() => {
+    if (!isEditMode) {
+      setLot('');
+      setZone('');
+      setSeverity('mineur');
+      setDescription('');
+      setClassification('constat');
+      setPhotos([]);
+      setExistingPhotoPaths([]);
+      setExistingPhotoUrls([]);
+      setFormLoaded(true);
+    }
+  }, [isEditMode]);
+
   // Pre-fill form in edit mode
   useEffect(() => {
     if (isEditMode && existingObs && !formLoaded) {
