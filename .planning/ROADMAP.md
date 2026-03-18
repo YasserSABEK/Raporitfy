@@ -2,30 +2,31 @@
 
 ## Milestone 1 : MVP Fonctionnel
 
-### Phase 01 — Foundation
+### Phase 01 — Foundation ✅
 **Goal:** Expo project initialized, Supabase connected, auth working, navigation skeleton in place.
 **Requirements:** [AUTH-01, AUTH-02]
-**Estimated Plans:** 2-3
+**Status:** Complete (18 mars 2026)
 
-- Expo SDK 52 + TypeScript + Expo Router v4
-- Supabase client configured (Auth, DB, Storage)
-- Database schema : tables core (organizations, profiles, projects, project_members)
-- RLS policies for organization-level data separation
-- Auth screens (login, register) + session management
-- Tab navigation skeleton + theme system (dark navy/amber)
+- ✅ Expo SDK 55 + TypeScript + Expo Router v7
+- ✅ Supabase client configured (Auth, DB, Storage) — lazy Proxy singleton
+- ✅ Database schema : tables core (organizations, profiles, projects, project_members)
+- ✅ RLS policies for organization-level data separation
+- ✅ Auth screens (login, register) + session management
+- ✅ Tab navigation skeleton + theme system (dark navy/amber)
 
 ---
 
-### Phase 02 — Projects
+### Phase 02 — Projects ✅
 **Goal:** Users can create, list, and manage multiple construction projects with email recipients.
 **Requirements:** [PROJ-01, PROJ-02, PROJ-03, PROJ-04, PROJ-05]
-**Estimated Plans:** 2-3
+**Status:** Complete (18 mars 2026)
 
-- Dashboard "Mes Chantiers" with project cards
-- Create project form (name, address, phase, description)
-- Project settings: email recipients list, project delegation
-- Archive/reactivate project
-- DB tables: projects, project_members, project_recipients
+- ✅ Dashboard "Mes Chantiers" with FlashList project cards + filter tabs
+- ✅ Create project form (name, address, phase, description) + Zod validation
+- ✅ Project detail screen with header card + visits placeholder
+- ✅ Project settings: email recipients CRUD, members list, archive/reactivate
+- ✅ Services layer + React Query hooks with cache invalidation
+- ✅ DB tables: projects, project_members, project_recipients (from Phase 01)
 
 ---
 

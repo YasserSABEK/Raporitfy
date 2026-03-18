@@ -14,14 +14,15 @@ Raporitfy est une application mobile (Expo / React Native) de génération assis
 
 <!-- Shipped and confirmed valuable. -->
 
-(Aucun — livrer pour valider)
+- [x] Authentification et séparation des données par organisation
+- [x] Création et gestion de multiples projets/chantiers
+- [x] Gestion des participants et liste de diffusion e-mail par projet
+- [x] Délégation d'accès projet à d'autres utilisateurs (absence, vacances)
 
 ### Active
 
 <!-- Current scope. Building toward these. -->
 
-- [ ] Création et gestion de multiples projets/chantiers
-- [ ] Gestion des participants et liste de diffusion e-mail par projet
 - [ ] Création de visites avec date, participants, météo, phase chantier
 - [ ] Saisie d'observations structurées par zone/lot avec photos
 - [ ] Attribution d'actions avec responsable, échéance, priorité, statut
@@ -32,8 +33,6 @@ Raporitfy est une application mobile (Expo / React Native) de génération assis
 - [ ] Diffusion automatisée par e-mail aux destinataires du projet
 - [ ] Suivi des actions ouvertes d'une visite à la suivante
 - [ ] Deux rôles : terrain (saisie) et bureau (relecture/validation)
-- [ ] Délégation d'accès projet à d'autres utilisateurs (absence, vacances)
-- [ ] Authentification et séparation des données par organisation
 
 ### Out of Scope
 
@@ -58,8 +57,8 @@ Raporitfy est une application mobile (Expo / React Native) de génération assis
 
 ## Constraints
 
-- **Stack mobile** : React Native + Expo (TypeScript) — mobile-first, pas de web
-- **Backend** : FastAPI (Python) avec type hints — workflow asynchrone pour génération docs
+- **Stack mobile** : React Native + Expo SDK 55 (TypeScript) — mobile-first, pas de web
+- **Backend** : Supabase (Auth, DB, Storage, Edge Functions) — pas de FastAPI séparé
 - **Base de données** : PostgreSQL via Supabase (projet Supabase existant avec token)
 - **Stockage** : Supabase Storage pour photos et exports PDF
 - **Langue** : Interface entièrement en français
@@ -72,13 +71,14 @@ Raporitfy est une application mobile (Expo / React Native) de génération assis
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Mobile-first Expo, pas de web | Les utilisateurs terrain sont sur smartphone | — Pending |
-| E-mail comme seul canal de diffusion | DNA du produit, simplicité, pas de portail client | — Pending |
-| Pas de voix/OCR au MVP | Réduit la complexité, focus sur le flux core | — Pending |
-| Supabase comme backend | Projet existant avec token, auth + storage + DB intégrés | — Pending |
+| Mobile-first Expo, pas de web | Les utilisateurs terrain sont sur smartphone | ✅ Validated |
+| E-mail comme seul canal de diffusion | DNA du produit, simplicité, pas de portail client | ✅ Validated |
+| Pas de voix/OCR au MVP | Réduit la complexité, focus sur le flux core | ✅ Validated |
+| Supabase comme backend (pas de FastAPI) | Auth + storage + DB intégrés, pas de CORS | ✅ Validated |
 | Pipeline IA en 3 temps | Plus fiable qu'un prompt unique pour le CR | — Pending |
-| Délégation d'accès multi-utilisateur | Continuité de service (absences, vacances) | — Pending |
-| Stockage backend, pas offline au MVP | Simplification du MVP, offline ajouté plus tard | — Pending |
+| Délégation d'accès multi-utilisateur | Continuité de service (absences, vacances) | ✅ Validated |
+| Stockage backend, pas offline au MVP | Simplification du MVP, offline ajouté plus tard | ✅ Validated |
+| Lazy Proxy Supabase client | Expo Router crash prevention in Expo Go SDK 55 | ✅ Critical |
 
 ---
-*Last updated: 17 mars 2026 after initialization*
+*Last updated: 18 mars 2026 after Phase 02 completion*

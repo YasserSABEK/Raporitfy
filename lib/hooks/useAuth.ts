@@ -53,13 +53,19 @@ export const useAuth = create<AuthState>((set, get) => ({
 
   signIn: async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password,
       });
 
       if (error) {
         return { error: error.message };
+      }
+
+      // Explicitly fetch profile so it's available immediately
+      if (data.session?.user) {
+        set({ session: data.session, user: data.session.user });
+        await get().fetchProfile(data.session.user.id);
       }
 
       return { error: null };

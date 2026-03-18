@@ -52,6 +52,10 @@ export default function TabLayout() {
           ),
         }}
       />
+      {/* Hide non-tab screens from bottom bar */}
+      <Tabs.Screen name="projects/new" options={{ href: null }} />
+      <Tabs.Screen name="projects/[id]/index" options={{ href: null }} />
+      <Tabs.Screen name="projects/[id]/settings" options={{ href: null }} />
     </Tabs>
   );
 }
