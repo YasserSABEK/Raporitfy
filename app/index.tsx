@@ -1,40 +1,11 @@
-import { useEffect } from 'react';
 import { Redirect } from 'expo-router';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import { useAuth } from '@/lib/hooks/useAuth';
-import { colors } from '@/lib/theme';
 
+// IMPORTANT: This file must have ZERO imports from @/lib/
+// The expo-secure-store / supabase import chain crashes during
+// module evaluation in Expo Go SDK 55, which prevents this route
+// from registering and causes "Unmatched Route".
+//
+// Auth redirect is handled by login.tsx (router.replace on success).
 export default function Index() {
-  const { session, initialized, initialize } = useAuth();
-
-  useEffect(() => {
-    if (!initialized) {
-      initialize();
-    }
-  }, [initialized]);
-
-  // Still loading auth state
-  if (!initialized) {
-    return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
-
-  // Auth state determined — redirect
-  if (session) {
-    return <Redirect href={'/(tabs)' as any} />;
-  }
-
   return <Redirect href="/(auth)/login" />;
 }
-
-const styles = StyleSheet.create({
-  loading: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.background,
-  },
-});

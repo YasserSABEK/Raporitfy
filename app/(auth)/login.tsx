@@ -17,12 +17,16 @@ export default function LoginScreen() {
       return;
     }
 
+    console.log('🔐 Login attempt:', email.trim().toLowerCase());
     setLoading(true);
     const { error } = await signIn(email, password);
+    console.log('🔐 Login result:', error ? `ERROR: ${error}` : 'SUCCESS');
     setLoading(false);
 
     if (error) {
       Alert.alert('Erreur de connexion', error);
+    } else {
+      router.replace('/(tabs)/projects' as any);
     }
   };
 
