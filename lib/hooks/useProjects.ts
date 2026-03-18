@@ -27,11 +27,29 @@ export function useProject(id: string) {
 
 export function useCreateProject() {
   const queryClient = useQueryClient();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
 
   return useMutation({
-    mutationFn: (data: { name: string; address?: string; description?: string; phase?: string }) =>
-      projectService.createProject({ ...data, organization_id: profile!.organization_id }),
+    mutationFn: async (data: { name: string; address?: string; description?: string; phase?: string }) => {
+      let orgId = profile?.organization_id;
+
+      // Fallback: fetch org_id directly if profile isn't in Zustand yet
+      if (!orgId && user) {
+        const { supabase } = await import('../supabase');
+        const { data: p } = await supabase
+          .from('profiles')
+          .select('organization_id')
+          .eq('id', user.id)
+          .single();
+        orgId = p?.organization_id;
+      }
+
+      if (!orgId) {
+        throw new Error("Profil introuvable. Veuillez vous reconnecter.");
+      }
+
+      return projectService.createProject({ ...data, organization_id: orgId });
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['projects'] }),
   });
 }
