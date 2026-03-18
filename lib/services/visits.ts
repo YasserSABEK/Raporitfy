@@ -164,7 +164,7 @@ export async function removeEvidence(id: string): Promise<void> {
 
 // ============ PHOTO UPLOAD ============
 
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
 
 export async function uploadPhoto(uri: string): Promise<string> {
