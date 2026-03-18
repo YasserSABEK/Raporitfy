@@ -1,4 +1,4 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
 import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useVisit, useObservations, useDeleteVisit, useDeleteObservation } from '@/lib/hooks/useVisits';
-import { getSignedUrl } from '@/lib/services/visits';
+import { getPhotoUrl } from '@/lib/services/visits';
 import { colors, spacing, typography, borderRadius } from '@/lib/theme';
 import { formatDate } from '@/lib/utils/date';
 
@@ -36,24 +36,14 @@ const STATUS_LABELS: Record<string, string> = {
   diffuse: 'Diffusé',
 };
 
-// Self-contained thumbnail component — each one loads its own signed URL
+// Simple synchronous thumbnail — public bucket, no async needed
 function ObsThumb({ path }: { path: string }) {
-  const [url, setUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    getSignedUrl(path)
-      .then(signedUrl => { if (!cancelled) setUrl(signedUrl); })
-      .catch(err => console.warn('Thumb URL error:', err));
-    return () => { cancelled = true; };
-  }, [path]);
-
-  if (!url) return null;
+  const url = getPhotoUrl(path);
   return <Image source={{ uri: url }} style={thumbStyles.img} />;
 }
 
 const thumbStyles = StyleSheet.create({
-  img: { width: 60, height: 60, borderRadius: borderRadius.md },
+  img: { width: 80, height: 80, borderRadius: borderRadius.md },
 });
 
 export default function VisitDetailScreen() {

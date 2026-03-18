@@ -177,13 +177,22 @@ export async function uploadPhoto(uri: string): Promise<string> {
     .upload(path, blob, { contentType: `image/${ext}` });
   if (error) throw new Error(error.message);
 
-  return path; // Store path, not URL — use getSignedUrl for display
+  return path;
 }
 
+// Public URL — bucket is public, no auth needed
+export function getPhotoUrl(path: string): string {
+  const { data } = supabase.storage
+    .from('evidence-photos')
+    .getPublicUrl(path);
+  return data.publicUrl;
+}
+
+// Signed URL fallback (kept for reference)
 export async function getSignedUrl(path: string): Promise<string> {
   const { data, error } = await supabase.storage
     .from('evidence-photos')
-    .createSignedUrl(path, 3600); // 1 hour
+    .createSignedUrl(path, 3600);
   if (error) throw new Error(error.message);
   return data.signedUrl;
 }

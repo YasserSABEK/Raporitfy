@@ -14,7 +14,7 @@ import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useCreateObservation, useUpdateObservation, useAddEvidence, useObservation, useEvidence } from '@/lib/hooks/useVisits';
-import { uploadPhoto, getSignedUrl } from '@/lib/services/visits';
+import { uploadPhoto, getPhotoUrl } from '@/lib/services/visits';
 import { colors, spacing, typography, borderRadius } from '@/lib/theme';
 import { Severity } from '@/lib/types/domain';
 
@@ -70,27 +70,14 @@ export default function ObservationScreen() {
     }
   }, [isEditMode, existingObs, formLoaded]);
 
-  // Load existing photo signed URLs
+  // Load existing photo URLs (synchronous — public bucket)
   useEffect(() => {
     if (isEditMode && existingEvidence && existingEvidence.length > 0) {
-      const loadUrls = async () => {
-        const paths = existingEvidence
-          .filter(e => e.type === 'photo' && e.file_url)
-          .map(e => e.file_url!);
-        setExistingPhotoPaths(paths);
-
-        const urls: string[] = [];
-        for (const path of paths) {
-          try {
-            const url = await getSignedUrl(path);
-            urls.push(url);
-          } catch {
-            // skip failed signed URLs
-          }
-        }
-        setExistingPhotoUrls(urls);
-      };
-      loadUrls();
+      const paths = existingEvidence
+        .filter(e => e.type === 'photo' && e.file_url)
+        .map(e => e.file_url!);
+      setExistingPhotoPaths(paths);
+      setExistingPhotoUrls(paths.map(p => getPhotoUrl(p)));
     }
   }, [isEditMode, existingEvidence]);
 
@@ -476,7 +463,7 @@ const styles = StyleSheet.create({
 
   photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
   photoWrapper: { position: 'relative' },
-  photoThumb: { width: 80, height: 80, borderRadius: borderRadius.md },
+  photoThumb: { width: 100, height: 100, borderRadius: borderRadius.md },
   photoDelete: { position: 'absolute', top: -6, right: -6 },
 
   submitButton: {
