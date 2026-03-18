@@ -165,27 +165,31 @@ export async function removeEvidence(id: string): Promise<void> {
 // ============ PHOTO UPLOAD ============
 
 export async function uploadPhoto(uri: string): Promise<string> {
-  // Read file as base64 using expo-file-system (fetch().blob() returns 0-byte on RN iOS)
+  // Supabase-recommended approach for React Native:
+  // 1. Read file as base64 (expo-file-system)
+  // 2. Decode to ArrayBuffer (base64-arraybuffer)
+  // 3. Upload ArrayBuffer to storage
   const FileSystem = require('expo-file-system');
-  const base64 = await FileSystem.readAsStringAsync(uri, {
+  const { decode } = require('base64-arraybuffer');
+
+  const base64Data = await FileSystem.readAsStringAsync(uri, {
     encoding: FileSystem.EncodingType.Base64,
   });
 
-  // Decode base64 to Uint8Array
-  const binaryString = atob(base64);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
-  }
-
   const ext = uri.split('.').pop()?.split('?')[0] || 'jpg';
-  const mimeType = ext === 'heic' ? 'image/heic' : ext === 'webp' ? 'image/webp' : ext === 'png' ? 'image/png' : 'image/jpeg';
+  const mimeType = ext === 'heic' ? 'image/heic'
+    : ext === 'webp' ? 'image/webp'
+    : ext === 'png' ? 'image/png'
+    : 'image/jpeg';
   const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
   const path = `observations/${filename}`;
 
   const { error } = await supabase.storage
     .from('evidence-photos')
-    .upload(path, bytes.buffer, { contentType: mimeType });
+    .upload(path, decode(base64Data), {
+      contentType: mimeType,
+      upsert: false,
+    });
   if (error) throw new Error(error.message);
 
   return path;
