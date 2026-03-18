@@ -164,16 +164,17 @@ export async function removeEvidence(id: string): Promise<void> {
 
 // ============ PHOTO UPLOAD ============
 
+import * as FileSystem from 'expo-file-system';
+import { decode } from 'base64-arraybuffer';
+
 export async function uploadPhoto(uri: string): Promise<string> {
   // Supabase-recommended approach for React Native:
   // 1. Read file as base64 (expo-file-system)
   // 2. Decode to ArrayBuffer (base64-arraybuffer)
   // 3. Upload ArrayBuffer to storage
-  const FileSystem = require('expo-file-system');
-  const { decode } = require('base64-arraybuffer');
-
+  
   const base64Data = await FileSystem.readAsStringAsync(uri, {
-    encoding: FileSystem.EncodingType.Base64,
+    encoding: 'base64', // Using string literal as fallback if enum is omitted in types
   });
 
   const ext = uri.split('.').pop()?.split('?')[0] || 'jpg';

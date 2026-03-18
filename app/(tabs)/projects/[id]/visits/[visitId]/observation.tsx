@@ -202,6 +202,9 @@ export default function ObservationScreen() {
                 type: 'photo',
                 file_url: result.value,
               });
+            } else {
+              console.error('Photo upload failed:', result.reason);
+              throw new Error(`Échec de l'envoi de la photo: ${result.reason?.message || 'Erreur inconnue'}`);
             }
           }
         }
