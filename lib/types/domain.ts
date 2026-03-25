@@ -97,11 +97,14 @@ export interface Decision {
   id: string;
   visit_id: string;
   content: string;
-  author_id: string;
-  validator_id: string | null;
-  scope: string | null;
+  author: string;                // GAP-A: texte libre (ex: "BET Structure", "MOA")
+  scope: string | null;          // 'lot_specifique' | 'chantier_global' | 'contractuel'
   validated: boolean;
+  validated_at: string | null;   // GAP-E: traçabilité
+  validated_by: string | null;   // GAP-E: traçabilité (FK profiles.id)
+  created_by: string;            // GAP-A: qui a SAISI la décision
   created_at: string;
+  updated_at: string;            // GAP-B: auto-updated
 }
 
 export interface ActionItem {
@@ -110,11 +113,13 @@ export interface ActionItem {
   observation_id: string | null;
   decision_id: string | null;
   owner: string;
-  deadline: string | null;
+  deadline: string | null;       // nullable — keep aligned with DB
   priority: ActionPriority;
   status: ActionStatus;
   description: string;
+  created_by: string;
   created_at: string;
+  updated_at: string;
 }
 
 export interface GeneratedDocument {

@@ -15,6 +15,8 @@ import {
 import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useVisit, useObservations, useDeleteVisit, useDeleteObservation } from '@/lib/hooks/useVisits';
+import { useDecisions, useDeleteDecision } from '@/lib/hooks/useDecisions';
+import { useActions, useDeleteAction, useOpenActionsForProject, useUpdateAction } from '@/lib/hooks/useActions';
 import { getPhotoUrl } from '@/lib/services/visits';
 import { colors, spacing, typography, borderRadius } from '@/lib/theme';
 import { formatDate } from '@/lib/utils/date';
@@ -37,6 +39,38 @@ const STATUS_LABELS: Record<string, string> = {
   valide: 'Validé',
   diffuse: 'Diffusé',
 };
+
+const PRIORITY_COLORS: Record<string, string> = {
+  basse: '#6B7280',
+  moyenne: '#F59E0B',
+  haute: '#EF4444',
+  urgente: '#DC2626',
+};
+
+const ACTION_STATUS_LABELS: Record<string, string> = {
+  ouverte: 'Ouverte',
+  en_cours: 'En cours',
+  fermee: 'Fermée',
+  reportee: 'Reportée',
+};
+
+const ACTION_STATUS_COLORS: Record<string, string> = {
+  ouverte: '#6B7280',
+  en_cours: '#3B82F6',
+  fermee: '#10B981',
+  reportee: '#F59E0B',
+};
+
+function getDeadlineInfo(deadline: string | null): { label: string; color: string; isLate: boolean } {
+  if (!deadline) return { label: 'Pas d\'échéance', color: colors.textMuted, isLate: false };
+  const d = new Date(deadline);
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const diff = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  if (diff < 0) return { label: `En retard · J+${Math.abs(diff)}`, color: '#EF4444', isLate: true };
+  if (diff <= 3) return { label: formatDate(deadline), color: '#F59E0B', isLate: false };
+  return { label: formatDate(deadline), color: '#10B981', isLate: false };
+}
 
 // Photo carousel for observation cards
 const CARD_WIDTH = Dimensions.get('window').width - spacing.lg * 2 - 2; // minus card padding + border
@@ -91,8 +125,14 @@ export default function VisitDetailScreen() {
   const { id: projectId, visitId } = useLocalSearchParams<{ id: string; visitId: string }>();
   const { data: visit, isLoading: loadingVisit, error: errorVisit } = useVisit(visitId!);
   const { data: observations, isLoading: loadingObs, refetch, isRefetching } = useObservations(visitId!);
+  const { data: decisions } = useDecisions(visitId!);
+  const { data: actions } = useActions(visitId!);
+  const { data: openActions } = useOpenActionsForProject(projectId!);
   const deleteMutation = useDeleteVisit();
   const deleteObsMutation = useDeleteObservation();
+  const deleteDecMutation = useDeleteDecision();
+  const deleteActMutation = useDeleteAction();
+  const updateActMutation = useUpdateAction();
 
   const handleRefresh = useCallback(() => { refetch(); }, [refetch]);
 
@@ -128,6 +168,10 @@ export default function VisitDetailScreen() {
           onPress: () => router.push(`/(tabs)/projects/${projectId}/visits/${visitId}/observation?observationId=${obsId}&t=${Date.now()}` as any),
         },
         {
+          text: 'Créer une action',
+          onPress: () => router.push(`/(tabs)/projects/${projectId}/visits/${visitId}/action?observationId=${obsId}&t=${Date.now()}` as any),
+        },
+        {
           text: 'Supprimer',
           style: 'destructive',
           onPress: () => {
@@ -156,6 +200,60 @@ export default function VisitDetailScreen() {
       ]
     );
   };
+
+  const handleDecisionLongPress = (decId: string) => {
+    Alert.alert(
+      'Action',
+      'Que souhaitez-vous faire ?',
+      [
+        {
+          text: 'Modifier',
+          onPress: () => router.push(`/(tabs)/projects/${projectId}/visits/${visitId}/decision?decisionId=${decId}&t=${Date.now()}` as any),
+        },
+        {
+          text: 'Créer une action',
+          onPress: () => router.push(`/(tabs)/projects/${projectId}/visits/${visitId}/action?decisionId=${decId}&t=${Date.now()}` as any),
+        },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert('Confirmer', 'Supprimer cette décision ?', [
+              { text: 'Annuler', style: 'cancel' },
+              {
+                text: 'Supprimer', style: 'destructive',
+                onPress: async () => { try { await deleteDecMutation.mutateAsync(decId); } catch (e: any) { Alert.alert('Erreur', e.message); } },
+              },
+            ]);
+          },
+        },
+        { text: 'Annuler', style: 'cancel' },
+      ]
+    );
+  };
+
+  const handleActionLongPress = (actId: string) => {
+    Alert.alert(
+      'Changer le statut',
+      'Sélectionnez le nouveau statut :',
+      [
+        { text: 'Ouverte', onPress: () => updateActMutation.mutate({ id: actId, status: 'ouverte' }) },
+        { text: 'En cours', onPress: () => updateActMutation.mutate({ id: actId, status: 'en_cours' }) },
+        { text: 'Fermée', onPress: () => updateActMutation.mutate({ id: actId, status: 'fermee' }) },
+        { text: 'Reportée', onPress: () => updateActMutation.mutate({ id: actId, status: 'reportee' }) },
+        { text: 'Supprimer', style: 'destructive', onPress: () => {
+          Alert.alert('Confirmer', 'Supprimer cette action ?', [
+            { text: 'Annuler', style: 'cancel' },
+            { text: 'Supprimer', style: 'destructive', onPress: async () => { try { await deleteActMutation.mutateAsync(actId); } catch (e: any) { Alert.alert('Erreur', e.message); } } },
+          ]);
+        }},
+        { text: 'Annuler', style: 'cancel' },
+      ]
+    );
+  };
+
+  // Actions from previous visits (carry-forward)
+  const carriedActions = (openActions ?? []).filter(a => a.visit_id !== visitId);
 
   if (loadingVisit) {
     return (
@@ -311,12 +409,156 @@ export default function VisitDetailScreen() {
               </View>
             )
           }
+          ListFooterComponent={
+            <>
+              {/* ===== DECISIONS SECTION ===== */}
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>
+                  Décisions {decisions && decisions.length > 0 ? `(${decisions.length})` : ''}
+                </Text>
+              </View>
+              {(!decisions || decisions.length === 0) ? (
+                <View style={styles.placeholder}>
+                  <Ionicons name="document-text-outline" size={32} color={colors.textMuted} />
+                  <Text style={styles.placeholderTitle}>Aucune décision enregistrée</Text>
+                </View>
+              ) : (
+                decisions.map((dec: any) => (
+                  <TouchableOpacity
+                    key={dec.id}
+                    style={styles.decCard}
+                    onPress={() => router.push(`/(tabs)/projects/${projectId}/visits/${visitId}/decision?decisionId=${dec.id}&t=${Date.now()}` as any)}
+                    onLongPress={() => handleDecisionLongPress(dec.id)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.decContent} numberOfLines={2}>{dec.content}</Text>
+                    <View style={styles.decFooter}>
+                      <View style={styles.decChip}>
+                        <Ionicons name="person-outline" size={12} color={colors.textSecondary} />
+                        <Text style={styles.decChipText}>{dec.author || 'Non spécifié'}</Text>
+                      </View>
+                      {dec.scope && (
+                        <View style={styles.decChip}>
+                          <Text style={styles.decChipText}>
+                            {dec.scope === 'lot_specifique' ? 'Lot' : dec.scope === 'contractuel' ? 'Contractuel' : 'Global'}
+                          </Text>
+                        </View>
+                      )}
+                      {dec.validated && (
+                        <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                ))
+              )}
+
+              {/* ===== ACTIONS SECTION ===== */}
+              <View style={[styles.sectionHeader, { marginTop: spacing.lg }]}>
+                <Text style={styles.sectionTitle}>
+                  Actions {actions && actions.length > 0 ? `(${actions.length})` : ''}
+                </Text>
+              </View>
+              {(!actions || actions.length === 0) ? (
+                <View style={styles.placeholder}>
+                  <Ionicons name="clipboard-outline" size={32} color={colors.textMuted} />
+                  <Text style={styles.placeholderTitle}>Aucune action assignée</Text>
+                </View>
+              ) : (
+                actions.map((act: any) => {
+                  const dl = getDeadlineInfo(act.deadline);
+                  const prColor = PRIORITY_COLORS[act.priority] || '#6B7280';
+                  const stColor = ACTION_STATUS_COLORS[act.status] || '#6B7280';
+                  return (
+                    <TouchableOpacity
+                      key={act.id}
+                      style={[styles.actCard, { borderLeftColor: prColor, borderLeftWidth: 4 }]}
+                      onPress={() => router.push(`/(tabs)/projects/${projectId}/visits/${visitId}/action?actionId=${act.id}&t=${Date.now()}` as any)}
+                      onLongPress={() => handleActionLongPress(act.id)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.actDescription} numberOfLines={2}>{act.description}</Text>
+                      <View style={styles.actFooter}>
+                        <View style={styles.actRow}>
+                          <Ionicons name="person-outline" size={12} color={colors.textSecondary} />
+                          <Text style={styles.actMeta}>{act.owner}</Text>
+                        </View>
+                        <View style={styles.actRow}>
+                          <Ionicons name="calendar-outline" size={12} color={dl.color} />
+                          <Text style={[styles.actMeta, { color: dl.color }]}>{dl.label}</Text>
+                        </View>
+                      </View>
+                      <View style={styles.actBadgeRow}>
+                        <View style={[styles.actBadge, { backgroundColor: stColor + '20' }]}>
+                          <Text style={[styles.actBadgeText, { color: stColor }]}>
+                            {ACTION_STATUS_LABELS[act.status] || act.status}
+                          </Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })
+              )}
+
+              {/* ===== CARRY-FORWARD SECTION ===== */}
+              {carriedActions.length > 0 && (
+                <>
+                  <View style={[styles.sectionHeader, { marginTop: spacing.lg }]}>
+                    <Text style={styles.sectionTitle}>Actions reportées ({carriedActions.length})</Text>
+                    <Ionicons name="information-circle-outline" size={18} color={colors.textMuted} />
+                  </View>
+                  {carriedActions.map((act: any) => {
+                    const dl = getDeadlineInfo(act.deadline);
+                    const prColor = PRIORITY_COLORS[act.priority] || '#6B7280';
+                    const stColor = ACTION_STATUS_COLORS[act.status] || '#6B7280';
+                    return (
+                      <TouchableOpacity
+                        key={act.id}
+                        style={[styles.actCard, { borderLeftColor: prColor, borderLeftWidth: 4 }]}
+                        onLongPress={() => handleActionLongPress(act.id)}
+                        activeOpacity={0.7}
+                      >
+                        <View style={styles.carryChip}>
+                          <Ionicons name="time-outline" size={12} color={colors.primary} />
+                          <Text style={styles.carryChipText}>Visite du {formatDate(act.visit_date)}</Text>
+                        </View>
+                        <Text style={styles.actDescription} numberOfLines={2}>{act.description}</Text>
+                        <View style={styles.actFooter}>
+                          <View style={styles.actRow}>
+                            <Ionicons name="person-outline" size={12} color={colors.textSecondary} />
+                            <Text style={styles.actMeta}>{act.owner}</Text>
+                          </View>
+                          <View style={styles.actRow}>
+                            <Ionicons name="calendar-outline" size={12} color={dl.color} />
+                            <Text style={[styles.actMeta, { color: dl.color }]}>{dl.label}</Text>
+                          </View>
+                        </View>
+                        <View style={styles.actBadgeRow}>
+                          <View style={[styles.actBadge, { backgroundColor: stColor + '20' }]}>
+                            <Text style={[styles.actBadgeText, { color: stColor }]}>
+                              {ACTION_STATUS_LABELS[act.status] || act.status}
+                            </Text>
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </>
+              )}
+            </>
+          }
         />
 
-        {/* FAB — Add Observation */}
+        {/* FAB — Add (3 options) */}
         <TouchableOpacity
           style={styles.fab}
-          onPress={() => router.push(`/(tabs)/projects/${projectId}/visits/${visitId}/observation?t=${Date.now()}` as any)}
+          onPress={() => {
+            Alert.alert('Ajouter', 'Que souhaitez-vous ajouter ?', [
+              { text: 'Observation', onPress: () => router.push(`/(tabs)/projects/${projectId}/visits/${visitId}/observation?t=${Date.now()}` as any) },
+              { text: 'Décision', onPress: () => router.push(`/(tabs)/projects/${projectId}/visits/${visitId}/decision?t=${Date.now()}` as any) },
+              { text: 'Action', onPress: () => router.push(`/(tabs)/projects/${projectId}/visits/${visitId}/action?t=${Date.now()}` as any) },
+              { text: 'Annuler', style: 'cancel' },
+            ]);
+          }}
           activeOpacity={0.8}
         >
           <Ionicons name="add" size={28} color="#FFFFFF" />
@@ -458,6 +700,85 @@ const styles = StyleSheet.create({
   },
   placeholderTitle: { fontSize: typography.sizes.md, fontWeight: typography.weights.medium, color: colors.textSecondary, marginTop: spacing.sm },
   placeholderSubtitle: { fontSize: typography.sizes.sm, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xs },
+
+  // Decision cards
+  decCard: {
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.sm,
+  },
+  decContent: {
+    fontSize: typography.sizes.md,
+    color: colors.text,
+    lineHeight: 20,
+    marginBottom: spacing.xs,
+  },
+  decFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  decChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+  },
+  decChipText: { fontSize: typography.sizes.xs, color: colors.textSecondary },
+
+  // Action cards
+  actCard: {
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: spacing.sm,
+  },
+  actDescription: {
+    fontSize: typography.sizes.md,
+    color: colors.text,
+    lineHeight: 20,
+    marginBottom: spacing.xs,
+  },
+  actFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
+  },
+  actRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  actMeta: { fontSize: typography.sizes.xs, color: colors.textSecondary },
+  actBadgeRow: { flexDirection: 'row', gap: spacing.xs },
+  actBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: borderRadius.full,
+  },
+  actBadgeText: { fontSize: typography.sizes.xs, fontWeight: typography.weights.semibold },
+
+  // Carry-forward chip
+  carryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.primaryMuted,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+    alignSelf: 'flex-start',
+    marginBottom: spacing.xs,
+  },
+  carryChipText: { fontSize: typography.sizes.xs, color: colors.primary, fontWeight: typography.weights.medium },
 
   // FAB
   fab: {

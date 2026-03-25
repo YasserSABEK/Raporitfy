@@ -31,3 +31,19 @@ export const observationSchema = z.object({
   classification: z.enum(['constat', 'remarque', 'reserve']).default('constat'),
 });
 export type ObservationFormData = z.infer<typeof observationSchema>;
+
+export const decisionSchema = z.object({
+  content: z.string().min(10, 'Le contenu doit faire au moins 10 caractères'),
+  author: z.string().min(2, 'Auteur requis'),
+  scope: z.enum(['lot_specifique', 'chantier_global', 'contractuel']).default('chantier_global'),
+});
+export type DecisionFormData = z.infer<typeof decisionSchema>;
+
+export const actionSchema = z.object({
+  description: z.string().min(5, 'La description doit faire au moins 5 caractères'),
+  owner: z.string().min(2, 'Responsable requis'),
+  deadline: z.string().optional(),
+  priority: z.enum(['basse', 'moyenne', 'haute', 'urgente']).default('moyenne'),
+});
+export type ActionFormData = z.infer<typeof actionSchema>;
+
