@@ -8,12 +8,15 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
 import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useCreateAction, useUpdateAction, useAction } from '@/lib/hooks/useActions';
 import { actionSchema } from '@/lib/validation/schemas';
 import { colors, spacing, typography, borderRadius } from '@/lib/theme';
+import { formatDate } from '@/lib/utils/date';
 import { ActionPriority } from '@/lib/types/domain';
 
 const PRIORITY_OPTIONS: { value: ActionPriority; label: string; color: string }[] = [
@@ -42,6 +45,8 @@ export default function ActionScreen() {
   const [description, setDescription] = useState('');
   const [owner, setOwner] = useState('');
   const [deadline, setDeadline] = useState('');
+  const [deadlineDate, setDeadlineDate] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [priority, setPriority] = useState<ActionPriority>('moyenne');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formLoaded, setFormLoaded] = useState(!isEditMode);
@@ -52,6 +57,8 @@ export default function ActionScreen() {
       setDescription('');
       setOwner('');
       setDeadline('');
+      setDeadlineDate(null);
+      setShowDatePicker(false);
       setPriority('moyenne');
       setFormLoaded(true);
     } else {
@@ -65,6 +72,7 @@ export default function ActionScreen() {
       setDescription(existingAction.description || '');
       setOwner(existingAction.owner || '');
       setDeadline(existingAction.deadline || '');
+      setDeadlineDate(existingAction.deadline ? new Date(existingAction.deadline) : null);
       setPriority(existingAction.priority || 'moyenne');
       setFormLoaded(true);
     }
@@ -166,16 +174,57 @@ export default function ActionScreen() {
           placeholderTextColor={colors.textMuted}
         />
 
-        {/* Échéance */}
+        {/* Échéance — Native Date Picker */}
         <Text style={styles.label}>ÉCHÉANCE</Text>
-        <TextInput
-          style={styles.input}
-          value={deadline}
-          onChangeText={setDeadline}
-          placeholder="AAAA-MM-JJ (ex: 2026-04-15)"
-          placeholderTextColor={colors.textMuted}
-          keyboardType="numbers-and-punctuation"
-        />
+        <TouchableOpacity
+          style={styles.datePickerBtn}
+          onPress={() => setShowDatePicker(true)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="calendar-outline" size={20} color={deadline ? colors.primary : colors.textMuted} />
+          <Text style={[styles.datePickerText, deadline ? styles.datePickerTextActive : null]}>
+            {deadline ? formatDate(deadline) : 'Sélectionner une date'}
+          </Text>
+          {deadline ? (
+            <TouchableOpacity
+              onPress={() => { setDeadline(''); setDeadlineDate(null); setShowDatePicker(false); }}
+              hitSlop={8}
+            >
+              <Ionicons name="close-circle" size={20} color={colors.textMuted} />
+            </TouchableOpacity>
+          ) : (
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          )}
+        </TouchableOpacity>
+        {showDatePicker && (
+          <View style={styles.datePickerContainer}>
+            <DateTimePicker
+              value={deadlineDate || new Date()}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              minimumDate={new Date()}
+              themeVariant="dark"
+              onChange={(event, selectedDate) => {
+                if (Platform.OS === 'android') setShowDatePicker(false);
+                if (event.type === 'set' && selectedDate) {
+                  setDeadlineDate(selectedDate);
+                  const yyyy = selectedDate.getFullYear();
+                  const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
+                  const dd = String(selectedDate.getDate()).padStart(2, '0');
+                  setDeadline(`${yyyy}-${mm}-${dd}`);
+                }
+              }}
+            />
+            {Platform.OS === 'ios' && (
+              <TouchableOpacity
+                style={styles.datePickerDone}
+                onPress={() => setShowDatePicker(false)}
+              >
+                <Text style={styles.datePickerDoneText}>Valider</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         {/* Priorité */}
         <Text style={styles.label}>PRIORITÉ</Text>
@@ -284,6 +333,45 @@ const styles = StyleSheet.create({
   },
   priorityDot: { width: 8, height: 8, borderRadius: 4 },
   priorityLabel: { fontSize: typography.sizes.xs, fontWeight: typography.weights.medium, color: colors.textSecondary },
+
+  // Date picker
+  datePickerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+  },
+  datePickerText: {
+    flex: 1,
+    fontSize: typography.sizes.md,
+    color: colors.textMuted,
+  },
+  datePickerTextActive: {
+    color: colors.text,
+  },
+  datePickerContainer: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginTop: spacing.xs,
+    overflow: 'hidden',
+  },
+  datePickerDone: {
+    alignItems: 'center',
+    padding: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  datePickerDoneText: {
+    color: colors.primary,
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+  },
 
   submitButton: {
     flexDirection: 'row',
