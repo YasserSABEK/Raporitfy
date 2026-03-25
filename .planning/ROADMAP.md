@@ -64,17 +64,19 @@
 
 ---
 
-### Phase 05 — PDF & Email
+### Phase 05 — PDF & Email ✅
 **Goal:** Users can generate a professional PDF report and distribute it via email.
 **Requirements:** [DOC-01, DOC-02, DOC-03, DOC-04]
-**Estimated Plans:** 3-4
+**Status:** Complete (25 mars 2026)
 
-- PDF template (HTML → PDF via Edge Function)
-- PDF preview in-app
-- Supabase Edge Function: generate PDF from visit data
-- Supabase Edge Function: send email with PDF via Resend
-- Recipients pulled from project settings
-- Generated document record (version, timestamp, recipients, storage link)
+- ✅ Edge Function: generate-pdf (pdf-lib, NF P 03-001 layout, embedded photos)
+- ✅ Edge Function: send-report (Resend API, dark-themed HTML email)
+- ✅ PDF preview via Linking.openURL
+- ✅ Document section in visit detail (generate / view / send buttons)
+- ✅ Report send screen with recipient selection
+- ✅ Generated documents table with versioning + sent_at tracking
+- ✅ Storage bucket: reports (public)
+- ⏳ Email sending pending domain verification on Resend
 
 ---
 
