@@ -2,6 +2,7 @@ import { supabase } from '../supabase';
 import { GeneratedDocument } from '../types/domain';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 
 export async function generatePdf(visitId: string): Promise<{ document_id: string; file_url: string; version: number }> {
   const { data: { session } } = await supabase.auth.getSession();
@@ -12,6 +13,7 @@ export async function generatePdf(visitId: string): Promise<{ document_id: strin
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${session.access_token}`,
+      'apikey': SUPABASE_ANON_KEY,
     },
     body: JSON.stringify({ visit_id: visitId }),
   });
@@ -37,6 +39,7 @@ export async function sendReport(
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${session.access_token}`,
+      'apikey': SUPABASE_ANON_KEY,
     },
     body: JSON.stringify({ visit_id: visitId, document_id: documentId, recipients }),
   });
