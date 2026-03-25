@@ -46,17 +46,21 @@
 
 ---
 
-### Phase 04 — Decisions & Actions
+### Phase 04 — Decisions & Actions ✅
 **Goal:** Users can record decisions and assign trackable actions with follow-up across visits.
 **Requirements:** [DEC-01, DEC-02, ACT-01, ACT-02, ACT-03, ACT-04]
-**Estimated Plans:** 2-3
+**Status:** Complete (25 mars 2026)
 
-- Decision form: content, author, scope, validation
-- Action form: owner, deadline, priority, status
-- Link actions to observations or decisions
-- Actions dashboard (project-level: filtering, status updates)
-- Auto-carry-forward: open actions appear in next visit
-- DB tables: decisions, action_items
+- ✅ Decision form: content, author (texte libre), scope (3 types), validation toggle
+- ✅ Action form: owner, deadline (native DateTimePicker), 4 priorities, status
+- ✅ Link actions to observations or decisions (pre-linking via long-press)
+- ✅ Actions dashboard (cross-project: filters by project + status, deadline badges, En retard · J+N)
+- ✅ Auto-carry-forward: open actions appear in visit detail (two-step query)
+- ✅ Visit detail: Observations + Décisions + Actions + Actions reportées sections
+- ✅ FAB with 3 options (Observation / Décision / Action)
+- ✅ Long-press quick status change on actions (4 statuses)
+- ✅ DB: ALTER TABLE decisions + action_items (CTO audit: 8 issues fixed)
+- ✅ CTO audit: tables already existed, priority mismatch, nullable deadline, nested join fix
 
 ---
 
