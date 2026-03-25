@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import {
+  Linking,
   View,
   Text,
   StyleSheet,
@@ -18,6 +19,7 @@ import { useVisit, useObservations, useDeleteVisit, useDeleteObservation } from 
 import { useDecisions, useDeleteDecision } from '@/lib/hooks/useDecisions';
 import { useActions, useDeleteAction, useOpenActionsForProject, useUpdateAction } from '@/lib/hooks/useActions';
 import { getPhotoUrl } from '@/lib/services/visits';
+import { useGeneratePdf, useLatestDocument } from '@/lib/hooks/useDocuments';
 import { colors, spacing, typography, borderRadius } from '@/lib/theme';
 import { formatDate } from '@/lib/utils/date';
 
@@ -133,6 +135,8 @@ export default function VisitDetailScreen() {
   const deleteDecMutation = useDeleteDecision();
   const deleteActMutation = useDeleteAction();
   const updateActMutation = useUpdateAction();
+  const { data: latestDoc } = useLatestDocument(visitId!);
+  const generatePdf = useGeneratePdf();
 
   const handleRefresh = useCallback(() => { refetch(); }, [refetch]);
 
@@ -254,6 +258,23 @@ export default function VisitDetailScreen() {
 
   // Actions from previous visits (carry-forward)
   const carriedActions = (openActions ?? []).filter(a => a.visit_id !== visitId);
+
+  const handleGeneratePdf = async () => {
+    try {
+      const result = await generatePdf.mutateAsync(visitId!);
+      Alert.alert(
+        'PDF Généré',
+        `Compte Rendu N°${result.version} créé avec succès.`,
+        [
+          { text: 'Ouvrir', onPress: () => Linking.openURL(result.file_url) },
+          { text: 'Envoyer', onPress: () => router.push(`/(tabs)/projects/${projectId}/visits/${visitId}/report?t=${Date.now()}` as any) },
+          { text: 'OK' },
+        ]
+      );
+    } catch (e: any) {
+      Alert.alert('Erreur', e.message || 'Impossible de générer le PDF');
+    }
+  };
 
   if (loadingVisit) {
     return (
@@ -544,6 +565,61 @@ export default function VisitDetailScreen() {
                   })}
                 </>
               )}
+
+              {/* ===== DOCUMENT SECTION ===== */}
+              <View style={[styles.sectionHeader, { marginTop: spacing.lg }]}>
+                <Text style={styles.sectionTitle}>Compte Rendu</Text>
+              </View>
+              <View style={styles.docSection}>
+                <TouchableOpacity
+                  style={styles.docBtn}
+                  onPress={handleGeneratePdf}
+                  disabled={generatePdf.isPending}
+                  activeOpacity={0.8}
+                >
+                  {generatePdf.isPending ? (
+                    <ActivityIndicator color={colors.primary} />
+                  ) : (
+                    <>
+                      <Ionicons name="document-text-outline" size={20} color={colors.primary} />
+                      <Text style={styles.docBtnText}>
+                        {latestDoc ? `Régénérer le CR (N°${latestDoc.version})` : 'Générer le Compte Rendu'}
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                {latestDoc && (
+                  <>
+                    <TouchableOpacity
+                      style={styles.docBtn}
+                      onPress={() => Linking.openURL(latestDoc.file_url)}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons name="eye-outline" size={20} color={colors.primary} />
+                      <Text style={styles.docBtnText}>Voir le PDF (N°{latestDoc.version})</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.docBtn, styles.docBtnSend]}
+                      onPress={() => router.push(`/(tabs)/projects/${projectId}/visits/${visitId}/report?t=${Date.now()}` as any)}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons name="send-outline" size={20} color="#FFFFFF" />
+                      <Text style={[styles.docBtnText, { color: '#FFFFFF' }]}>Diffuser le CR</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+
+                {latestDoc?.sent_at && (
+                  <View style={styles.docSentBadge}>
+                    <Ionicons name="checkmark-circle" size={14} color="#10B981" />
+                    <Text style={styles.docSentText}>
+                      Diffusé le {formatDate(latestDoc.sent_at)} · {latestDoc.recipients?.length || 0} destinataire(s)
+                    </Text>
+                  </View>
+                )}
+              </View>
             </>
           }
         />
@@ -796,5 +872,43 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
+  },
+
+  // Document section
+  docSection: {
+    gap: spacing.sm,
+    marginBottom: spacing.xl,
+  },
+  docBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: colors.surface,
+  },
+  docBtnText: {
+    fontSize: typography.sizes.md,
+    fontWeight: typography.weights.medium as any,
+    color: colors.primary,
+  },
+  docBtnSend: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  docSentBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    padding: spacing.sm,
+    backgroundColor: '#10B98110',
+    borderRadius: borderRadius.md,
+  },
+  docSentText: {
+    fontSize: typography.sizes.xs,
+    color: '#10B981',
   },
 });

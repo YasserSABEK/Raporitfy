@@ -61,6 +61,7 @@ export default function TabLayout() {
       <Tabs.Screen name="projects/[id]/visits/[visitId]/observation" options={{ href: null }} />
       <Tabs.Screen name="projects/[id]/visits/[visitId]/decision" options={{ href: null }} />
       <Tabs.Screen name="projects/[id]/visits/[visitId]/action" options={{ href: null }} />
+      <Tabs.Screen name="projects/[id]/visits/[visitId]/report" options={{ href: null }} />
     </Tabs>
   );
 }
