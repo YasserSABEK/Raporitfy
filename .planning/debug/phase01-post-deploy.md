@@ -1,4 +1,4 @@
-# Debug: Phase 01 Foundation — Post-Deploy Issues
+cd /Users/yassersabek/Downloads/Raporitfy && npx tsc --noEmit 2>&1 | head -10# Debug: Phase 01 Foundation — Post-Deploy Issues
 
 **Started:** 2026-03-18T00:41:00Z
 **Status:** Active

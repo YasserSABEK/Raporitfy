@@ -174,27 +174,30 @@ export default function ReportScreen() {
           </View>
         ))}
 
-        {/* Send button */}
+        {/* Coming soon notice */}
+        <View style={styles.comingSoonCard}>
+          <Ionicons name="rocket-outline" size={24} color={colors.primary} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.comingSoonTitle}>Diffusion par email — Bientôt disponible</Text>
+            <Text style={styles.comingSoonText}>
+              L'envoi automatique par email est en cours de configuration.{'\n'}
+              En attendant, vous pouvez partager le PDF directement depuis la visite en appuyant sur "Voir le PDF".
+            </Text>
+          </View>
+        </View>
+
+        {/* Send button — disabled */}
         <TouchableOpacity
-          style={[styles.sendBtn, (!latestDoc || sendReport.isPending) && styles.sendBtnDisabled]}
-          onPress={handleSend}
-          disabled={!latestDoc || sendReport.isPending}
+          style={[styles.sendBtn, styles.sendBtnDisabled]}
+          disabled={true}
           activeOpacity={0.8}
         >
-          {sendReport.isPending ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-              <ActivityIndicator color="#FFFFFF" />
-              <Text style={styles.sendBtnText}>Envoi en cours...</Text>
-            </View>
-          ) : (
-            <>
-              <Ionicons name="send" size={20} color="#FFFFFF" />
-              <Text style={styles.sendBtnText}>
-                Diffuser à {allRecipients.length} destinataire{allRecipients.length > 1 ? 's' : ''}
-              </Text>
-            </>
-          )}
+          <Ionicons name="send" size={20} color="#FFFFFF" />
+          <Text style={styles.sendBtnText}>
+            Diffuser à {allRecipients.length} destinataire{allRecipients.length > 1 ? 's' : ''}
+          </Text>
         </TouchableOpacity>
+        <Text style={styles.comingSoonHint}>Disponible après vérification du domaine email</Text>
       </ScrollView>
     </>
   );
@@ -250,4 +253,13 @@ const styles = StyleSheet.create({
   },
   sendBtnDisabled: { opacity: 0.5 },
   sendBtnText: { fontSize: typography.sizes.md, fontWeight: typography.weights.semibold as any, color: '#FFFFFF' },
+  comingSoonCard: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,
+    padding: spacing.md, backgroundColor: colors.primary + '10',
+    borderRadius: borderRadius.md, borderWidth: 1, borderColor: colors.primary + '30',
+    marginTop: spacing.lg,
+  },
+  comingSoonTitle: { fontSize: typography.sizes.md, fontWeight: typography.weights.semibold as any, color: colors.primary, marginBottom: 4 },
+  comingSoonText: { fontSize: typography.sizes.sm, color: colors.textSecondary, lineHeight: 20 },
+  comingSoonHint: { fontSize: typography.sizes.xs, color: colors.textMuted, textAlign: 'center' as const, marginTop: spacing.sm },
 });

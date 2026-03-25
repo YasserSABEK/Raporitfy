@@ -34,7 +34,8 @@
           "photosPermission": "Raporitfy a besoin d'accéder à vos photos pour les ajouter aux observations.",
           "cameraPermission": "Raporitfy a besoin de votre caméra pour photographier les observations de chantier."
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": false
