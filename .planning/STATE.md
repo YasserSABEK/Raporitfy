@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 18 mars 2026)
 
 **Core value:** Permettre à un maître d'œuvre de produire un CR de visite structuré et diffusable en minutes, pas en heures.
-**Current focus:** Phase 04 — Decisions & Actions (next)
+**Current focus:** Phase 05 — PDF & Email (next)
 
 ## Current Milestone
 
 **Milestone 1 : MVP Fonctionnel**
 - Total phases: 7 (01-Foundation → 07-AI Draft)
-- Current phase: Phase 03 ✅ Complete
-- Completed phases: 3 (01-Foundation, 02-Projects, 03-Visits)
+- Current phase: Phase 04 ✅ Complete
+- Completed phases: 4 (01-Foundation, 02-Projects, 03-Visits, 04-Decisions & Actions)
 
 ## Phase Status
 
@@ -21,7 +21,7 @@ See: .planning/PROJECT.md (updated 18 mars 2026)
 | 01 | Foundation | ✅ Complete | 01-01, 01-02 |
 | 02 | Projects | ✅ Complete | 02-01, 02-02 |
 | 03 | Visits | ✅ Complete | 03-01, 03-02 |
-| 04 | Decisions & Actions | ⏳ Not started | — |
+| 04 | Decisions & Actions | ✅ Complete | 04-01, 04-02, 04-03 |
 | 05 | PDF & Email | ⏳ Not started | — |
 | 06 | Validation Workflow | ⏳ Not started | — |
 | 07 | AI Draft (Optional) | ⏳ Not started | — |
@@ -65,5 +65,11 @@ See: .planning/PROJECT.md (updated 18 mars 2026)
 | 18/03/2026 | Timestamp param on all form navigations | Prevents Expo Router component reuse from showing stale form data |
 | 18/03/2026 | `expo-file-system/legacy` for photo upload | Main package deprecated readAsStringAsync in SDK 55 |
 
+## Session Continuity
+
+Last session: 25 mars 2026
+Stopped at: Session resumed, ready for Phase 04 — Decisions & Actions
+Resume file: .continue-here.md
+
 ---
-*Last updated: 18 mars 2026 after Phase 03 completion*
+*Last updated: 25 mars 2026 — session resumed*
